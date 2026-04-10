@@ -1,0 +1,16 @@
+{
+  "name": "brunoteo-idea-incubator",
+  "owner": {
+    "name": "brunoteo"
+  },
+  "plugins": [
+    {
+      "name": "idea-incubator",
+      "source": {
+        "source": "github",
+        "repo": "brunoteo/idea-incubator"
+      },
+      "description": "Push business ideas from raw thought to a defensible go/park/kill verdict"
+    }
+  ]
+}
