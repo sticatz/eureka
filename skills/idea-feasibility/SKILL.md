@@ -18,7 +18,8 @@ Can we build, run, afford, and legally operate this at the scale GTM implies? Fo
    - If any missing: "Feasibility needs concept, validation, and GTM. Missing: [list]."
    - If any has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `FEASIBILITY.md` exists — if so, pick up where things left off.
-6. Read all three priors. You need:
+6. **Gap resolution scan (Protocol B' — rerun case only):** If FEASIBILITY.md already exists, also read `MVP.md` (the only later artifact that can reference feasibility) and collect every `gaps` entry where `phase: feasibility` and `resolved: false`. Surface them to the user per CONVENTIONS.md Protocol B'. At phase completion, flip `resolved: true` + `resolved_in: <YYYY-MM-DD>` on the addressed entries in MVP.md. Touch only the matching `gaps` entries — no prose edits.
+7. Read all three priors. You need:
    - The target user and problem (CONCEPT.md)
    - The demand signal and alternatives (VALIDATION.md)
    - The channels, volume expectations, and cost structure (GTM.md)
@@ -33,10 +34,10 @@ digraph feasibility {
     gate [label="Gate check:\nCONCEPT.md + VALIDATION.md\n+ GTM.md complete?" shape=diamond];
     explore [label="Explore:\ntechnical, operational,\nresource, legal"];
     drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in GTM?" shape=diamond];
+    gap [label="Gap in any\nearlier phase?" shape=diamond];
     complete [label="Phase complete" shape=ellipse];
     mvp [label="/idea-mvp" shape=box];
-    gtm [label="/idea-gtm\n(back-arrow)" shape=box];
+    earlier [label="/idea-concept or\n/idea-validate or\n/idea-gtm\n(back-arrow, advisory)" shape=box];
     prior [label="Missing prior phase" shape=box];
 
     entry -> gate;
@@ -44,9 +45,9 @@ digraph feasibility {
     gate -> prior [label="missing / incomplete"];
     explore -> drift [label="topic drifts"];
     drift -> explore [label="redirect (problem/distribution/mvp/verdict)"];
-    explore -> gap [label="feasibility reveals GTM gap"];
-    gap -> explore [label="note gap, continue"];
-    gap -> gtm [label="back-arrow (advisory)" style=dashed];
+    explore -> gap [label="feasibility reveals earlier-phase gap"];
+    gap -> explore [label="log gap entry, continue"];
+    gap -> earlier [label="user may rerun later (advisory)" style=dashed];
     explore -> complete [label="all 4 sub-concerns explored"];
     complete -> mvp [label="proceed"];
     complete -> mvp [label="proceed-with-caution" style=dashed];
@@ -93,6 +94,23 @@ Surface tensions with GTM's cost structure explicitly: "GTM says CAC is $X, feas
 
 Don't assume compliance is simple. "We'll just handle it" is a red flag. If the user doesn't know the regulatory landscape, mark it as a key risk.
 
+## Handling Depth Gaps
+
+Feasibility often exposes weaknesses in **any** earlier phase — a concept target user that can't be served at technical cost, a validation claim that ignores operational burden, a GTM channel whose scale implies infrastructure nobody priced. Follow CONVENTIONS.md Protocol B:
+
+1. Append an entry to `FEASIBILITY.md`'s frontmatter `gaps` array:
+   ```yaml
+   - phase: concept | validate | gtm
+     note: <1-line description of the gap>
+     severity: minor | significant
+     resolved: false
+     resolved_in: null
+   ```
+2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
+3. Proceed with feasibility. Advisory, not blocking.
+
+A feasibility finding may produce gaps in multiple earlier phases at once — record each one separately, against the phase where the thinking actually lives. Pick severity honestly (`significant` = could flip the decide verdict).
+
 ## Red Flags
 
 When you hear any of these, respond with the pushback directly in prose. Do not accept the answer and continue.
@@ -115,7 +133,7 @@ When you hear any of these, respond with the pushback directly in prose. Do not 
 | Drift toward | Response |
 |---|---|
 | Revisiting problem or demand | "That's VALIDATION.md territory. If you want to revise it, rerun `/eureka:idea-validate`. Here we're evaluating whether the validated problem can be feasibly addressed." |
-| Distribution strategy changes | "Channel strategy lives in GTM.md. If feasibility suggests a channel won't work at scale, I'll note the gap." |
+| Distribution strategy changes | "Channel strategy lives in GTM.md. If feasibility suggests a channel won't work at scale, I'll log a `gtm` gap entry in this artifact's frontmatter and flag it for decide." |
 | MVP scoping | "We'll get to MVP scope next — right now we need to know what's feasible before we scope what to build." |
 | Verdict | "Not yet — MVP scoping still needs to happen. Then decide." |
 

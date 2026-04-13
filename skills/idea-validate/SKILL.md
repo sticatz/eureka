@@ -19,6 +19,7 @@ Interrogate whether the problem is real, who has it, how painful it is, and what
    - If `CONCEPT.md` has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `VALIDATION.md` exists — if so, read it and pick up where things left off.
 6. Read `CONCEPT.md` to ground the conversation — you need the problem statement, target user, and differentiation claim.
+7. **Gap resolution scan (Protocol B' — rerun case only):** If VALIDATION.md already exists (this is a rerun), also read every later artifact in the folder (`GTM.md`, `FEASIBILITY.md`, `MVP.md`) and collect every `gaps` entry where `phase: validate` and `resolved: false`. If any exist, surface them at the top of the conversation per CONVENTIONS.md Protocol B'. Ask the user which ones this rerun will address. At phase completion, flip `resolved: true` + `resolved_in: <YYYY-MM-DD>` on the addressed entries in the downstream artifacts. Do not modify any prose in those files.
 
 ## Transition Graph
 
@@ -28,19 +29,19 @@ digraph validate {
     gate [label="Gate check:\nCONCEPT.md complete?" shape=diamond];
     explore [label="Explore:\nproblem reality,\nwho has it,\nalternatives"];
     drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in concept?" shape=diamond];
+    gap [label="Gap in any\nearlier phase?" shape=diamond];
     complete [label="Phase complete" shape=ellipse];
     gtm [label="/idea-gtm" shape=box];
-    concept [label="/idea-concept\n(back-arrow)" shape=box];
+    concept [label="/idea-concept\n(back-arrow, advisory)" shape=box];
 
     entry -> gate;
     gate -> explore [label="pass"];
     gate -> concept [label="missing / incomplete"];
     explore -> drift [label="topic drifts"];
     drift -> explore [label="redirect (tech/distribution/pricing/verdict)"];
-    explore -> gap [label="validation reveals concept gap"];
-    gap -> explore [label="note gap, continue"];
-    gap -> concept [label="back-arrow (advisory)" style=dashed];
+    explore -> gap [label="validation reveals earlier-phase gap"];
+    gap -> explore [label="log gap entry, continue"];
+    gap -> concept [label="user may rerun later (advisory)" style=dashed];
     explore -> complete [label="problem reality + alternatives mapped"];
     complete -> gtm [label="proceed"];
     complete -> gtm [label="proceed-with-caution" style=dashed];
@@ -96,6 +97,23 @@ When the user names a competitor or market, use WebSearch (if available) to veri
 Present findings to the user and ask: "Does this match what you know? What's different about your approach?" This keeps the user in the loop while leveraging tools they don't have.
 
 If WebSearch is unavailable or returns nothing useful, don't silently skip — tell the user: "I couldn't find data on [X]. Do you have a source, or should we mark this as an assumption?" Unverifiable claims must be recorded as assumptions, not presented as fact.
+
+## Handling Depth Gaps
+
+When the conversation reveals that an **earlier phase's work** is weaker than the validation findings require — not a claim this skill should revise itself, but a depth gap in prior thinking — follow CONVENTIONS.md Protocol B:
+
+1. Append an entry to `VALIDATION.md`'s frontmatter `gaps` array:
+   ```yaml
+   - phase: concept
+     note: <1-line description of the gap>
+     severity: minor | significant
+     resolved: false
+     resolved_in: null
+   ```
+2. Tell the user: "I'm noting a <severity> gap in concept — <summary>. You can rerun `/eureka:idea-concept` later to close it, or leave it for idea-decide to weigh. Continuing."
+3. Proceed with validation. Advisory, not blocking.
+
+At validate's phase, the only earlier phase is `concept`. Pick severity honestly — `significant` means the weakness could flip the eventual decide verdict.
 
 ## Red Flags
 

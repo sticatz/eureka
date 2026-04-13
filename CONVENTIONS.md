@@ -14,13 +14,13 @@ idea-recap (read-only utility, invokable anytime)
 
 ## Frontmatter Schema
 
-### Phase artifacts (CONCEPT.md, VALIDATION.md, GTM.md, FEASIBILITY.md, MVP.md)
+### Phase artifacts (VALIDATION.md, GTM.md, FEASIBILITY.md, MVP.md)
 
-All phase artifacts use this frontmatter:
+All downstream phase artifacts use this frontmatter:
 
 ```yaml
 ---
-phase: concept | validate | gtm | feasibility | mvp
+phase: validate | gtm | feasibility | mvp
 status: in-progress | complete
 verdict: null | proceed | proceed-with-caution | killer
 evidence_strength: strong | medium | weak | n/a
@@ -31,7 +31,39 @@ gaps: []
 ---
 ```
 
-Each entry in `gaps` is an object: `{ phase: "<phase>", note: "<description>" }`. Empty array when no gaps found.
+Each entry in `gaps` is an object:
+
+```yaml
+- phase: <earlier-phase>          # which prior phase the gap lives in
+  note: <short description>        # 1-line description of the depth gap
+  severity: minor | significant    # see below
+  resolved: false                  # flipped to true when the earlier phase is rerun to address it
+  resolved_in: null                # ISO date (YYYY-MM-DD) when resolved, else null
+```
+
+Empty array when no gaps found. A gap may point to **any** earlier phase, not only the immediately prior one — feasibility can note a gap in concept, MVP can note a gap in validate, etc.
+
+**Severity:**
+- `minor` — a detail worth sharpening but not load-bearing for the decide verdict.
+- `significant` — a dimension whose weakness could flip the decide verdict.
+
+Pick honestly. Inflation defeats the purpose; undercounting buries real problems.
+
+### CONCEPT.md (first-phase exception)
+
+CONCEPT.md omits the `gaps` field — it is the first phase and has no prior work to point at. All other frontmatter fields are identical.
+
+```yaml
+---
+phase: concept
+status: in-progress | complete
+verdict: null | proceed | proceed-with-caution | killer
+evidence_strength: strong | medium | weak | n/a
+key_risks: []
+overridden: false
+override_reason: null
+---
+```
 
 ### DECISION.md
 
@@ -57,7 +89,7 @@ override_reason: null
 | `evidence_strength` | How much this phase's conclusions rest on evidence vs assumption. `strong` = most claims evidenced. `weak` = most claims are assumptions. Read by idea-decide. |
 | `key_risks` | Short risk tags. Scanned by idea-decide and idea-recap. |
 | `overridden` / `override_reason` | Set on the *current* artifact when the user pushed past a `killer` verdict from a *prior* phase to start this one. Override requires a reason — "just do it" is not accepted. |
-| `gaps` | Array of `{ phase, note }` objects. Each entry records a significant depth gap this phase noticed in an earlier phase's work. Advisory only — does not block. idea-decide reads these. Empty array when no gaps found. |
+| `gaps` | Array of depth-gap objects (`phase`, `note`, `severity`, `resolved`, `resolved_in`). Each entry records a depth gap this phase noticed in an earlier phase's work. Advisory only — does not block. idea-decide reads these and weighs them per the threshold rule (Gating Protocol B). Empty array when no gaps found. Omitted entirely on CONCEPT.md. |
 
 ## Gating Protocol
 
@@ -76,11 +108,52 @@ Then proceed. If the user says "just do it" without a reason, refuse again. Over
 
 ### B. Depth-gap back-arrow (advisory, non-blocking)
 
-When a skill notices a significant gap in an earlier phase's work during the conversation:
+When a skill notices a depth gap in **any** earlier phase's work during the conversation — not only the immediately prior one — follow this procedure:
 
-1. Add an entry to the current artifact's frontmatter `gaps` array: `{ phase: "<phase>", note: "<short description>" }`. Multiple gaps in different prior phases can be recorded.
-2. Tell the user: "I'm noting a gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` to address it, or leave it. idea-decide will see this note."
+1. Append an entry to the current artifact's frontmatter `gaps` array:
+
+   ```yaml
+   - phase: <earlier-phase>
+     note: <1-line description>
+     severity: minor | significant
+     resolved: false
+     resolved_in: null
+   ```
+
+   Multiple gaps in different prior phases can be recorded in the same artifact. Pick severity honestly (see schema above).
+
+2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
+
 3. **Proceed regardless.** This is advisory, not blocking.
+
+**idea-decide threshold rule (derived from severity):**
+
+- 1 significant unresolved gap → advisory note in Step 3, no cap.
+- 2 significant unresolved gaps → `evidence_strength` for the decide verdict cannot exceed `medium`.
+- 3+ significant unresolved gaps → `evidence_strength` cannot exceed `weak`.
+
+Minor gaps accumulate as signal but do not trigger the cap. Resolved gaps do not count toward the threshold — they count as *positive* signal (the user closed a loop) and should be surfaced in the decide reasoning.
+
+### B'. Gap resolution on phase rerun (narrow exception to Protocol D)
+
+When a skill is invoked against an **existing** artifact (a rerun of an earlier phase), it must:
+
+1. **Scan downstream for back-arrows.** After the gate check, read every *later* artifact that exists in the idea folder. Collect every entry in those artifacts' `gaps` arrays where `phase: <this-phase>` and `resolved: false`.
+
+2. **Surface them to the user.** If any exist, show them at the top of the conversation:
+
+   > "When we last left this, later phases noted these gaps here:
+   > - [FEASIBILITY.md, significant] <note>
+   > - [MVP.md, minor] <note>
+   >
+   > Which of these do you want to address in this rerun? (You can address all, some, or none — and we can still explore other threads.)"
+
+3. **Mark resolved after the rerun.** When the user explicitly confirms a gap has been addressed (or at phase completion, ask "did this rerun close any of the gaps we surfaced at the top?"), edit the *downstream* artifact's matching entry to set `resolved: true` and `resolved_in: <YYYY-MM-DD>`. Do not modify any prose in the downstream artifact — only the `gaps` array entry.
+
+This is the **only** case where a skill may touch another phase's artifact file. It is narrowly scoped:
+- Only writes to the `gaps` array, never to prose or other frontmatter fields.
+- Only flips `resolved: false → true` and fills `resolved_in`.
+- Requires explicit user confirmation per entry.
 
 ### C. Hard gate on idea-decide (blocking, no override)
 
@@ -96,6 +169,8 @@ No skill modifies an earlier phase's artifact body. Trivial additions (e.g., a n
 ```
 
 Anything non-trivial: write a back-arrow (add to `gaps`), tell the user to rerun the earlier phase. Do not rewrite prior sections.
+
+**Exception:** Protocol B' (gap resolution on rerun) allows a rerunning skill to flip `resolved` and `resolved_in` on matching entries in *downstream* artifacts' `gaps` arrays. That is the only allowed cross-artifact write.
 
 ## Escalation Protocol
 
