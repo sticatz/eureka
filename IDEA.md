@@ -96,13 +96,15 @@ override_reason: "Willing to gamble on weak evidence because hypothesis is cheap
 
 The user always has autonomy. The friction sits at the exact moment they ignore a red flag, and the override itself becomes signal for later phases (especially decide).
 
-### Back-Arrows: Explicit, Not Auto
+### Back-Arrows: Advisory, Not Blocking
 
-When a later phase finds a significant gap in an earlier phase's work, it does **not** silently patch. It:
+When a later phase finds a depth gap in an earlier phase's work, it does **not** silently patch. It:
 
-1. Adds the gap to its own frontmatter `gaps` array (e.g., `{ phase: "concept", note: "..." }`).
-2. Refuses to proceed (soft gate).
-3. Tells the user exactly which earlier phase to rerun.
+1. Adds a structured entry to its own frontmatter `gaps` array: `{ phase, note, severity: minor|significant, resolved: false, resolved_in: null }`. Gaps may point to **any** earlier phase, not only the immediately prior one.
+2. Tells the user and suggests rerunning the earlier phase.
+3. **Proceeds regardless.** Gaps are advisory, not blocking (see CONVENTIONS.md Gating Protocol B).
+
+Unresolved `significant` gaps accumulate as signal for `idea-decide`, which caps `evidence_strength` at `medium` (2 significant) or `weak` (3+) per the threshold rule. When the user reruns an earlier phase to close a gap, the rerunning skill flips `resolved: true` on the matching entry in the downstream artifact (Protocol B') — the only allowed cross-artifact write.
 
 Trivial additions (e.g., a new competitor discovered in feasibility) may be appended to an earlier artifact under a clearly marked footer (`## Notes from feasibility phase`), never by rewriting prior sections.
 

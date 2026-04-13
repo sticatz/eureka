@@ -1,14 +1,14 @@
 {
-  "name": "brunoteo-idea-incubator",
+  "name": "sticatz-eureka",
   "owner": {
-    "name": "brunoteo"
+    "name": "sticatz"
   },
   "plugins": [
     {
-      "name": "idea-incubator",
+      "name": "eureka",
       "source": {
         "source": "github",
-        "repo": "brunoteo/idea-incubator"
+        "repo": "sticatz/eureka"
       },
       "description": "Push business ideas from raw thought to a defensible go/park/kill verdict"
     }

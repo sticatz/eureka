@@ -136,9 +136,10 @@ evidence_strength: n/a
 key_risks: []
 overridden: false
 override_reason: null
-gaps: []
 ---
 ````
+
+Note: CONCEPT.md omits the `gaps` field (first phase — no prior work to point at). All downstream phase artifacts include it per CONVENTIONS.md.
 
 ````markdown
 # <Idea Name>

@@ -20,10 +20,10 @@ Read-only summary of any idea's current state. Never modifies artifacts.
 
 ### Status Overview
 
-| Phase | Status | Verdict | Evidence | Risks | Overrides | Gaps |
+| Phase | Status | Verdict | Evidence | Risks | Overrides | Gaps (unresolved / resolved) |
 |-------|--------|---------|----------|-------|-----------|------|
 
-One row per artifact that exists. Fill from frontmatter.
+One row per artifact that exists. Fill from frontmatter. For the Gaps column, show `<unresolved-count> / <resolved-count>` with a `⚠` suffix if any unresolved entry has `severity: significant`. CONCEPT.md has no gaps field — show `—` for that row.
 
 **Current phase:** the latest artifact with `status: in-progress`, or if all complete, state "all phases complete."
 
@@ -46,7 +46,13 @@ List every artifact where `overridden: true`, with the `override_reason`. These 
 
 ### Unresolved Gaps
 
-List every entry from every artifact's `gaps` array. These are depth gaps that were noted but never addressed.
+For each artifact with a `gaps` array, list every entry where `resolved: false`. Format: `[<source-artifact>, severity=<minor|significant>, phase=<target-phase>] <note>`. CONCEPT.md has no gaps field — skip it.
+
+Count `significant` unresolved gaps and surface the count prominently. If the count is 2+, add a line: "Per Gating Protocol B, this will cap idea-decide's evidence_strength at `medium` (2 significant) or `weak` (3+)."
+
+### Resolved Gaps
+
+For each artifact with a `gaps` array, list every entry where `resolved: true`, showing `resolved_in` date. These are gaps the user went back and closed — positive signal. If none, omit this section.
 
 ### Verdict (if decided)
 
@@ -63,7 +69,7 @@ If `verdict: go` in DECISION.md, generate a checklist:
 3. **From FEASIBILITY.md risks:** Any legal/compliance items → "Resolve: [item]"
 4. **From FEASIBILITY.md risks:** Any technical unknowns → "Spike: [unknown]"
 5. **From GTM.md:** Faked components from MVP that need real versions for growth → "Build real: [component]"
-6. **From gaps:** Any unresolved gap that affects the MVP → "Address: [gap]"
+6. **From gaps:** Any `resolved: false` gap entry that affects the MVP → "Address: [severity] [gap]"
 
 The checklist is derived, not manually maintained. It surfaces everything that needs attention before or shortly after launch.
 

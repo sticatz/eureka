@@ -14,7 +14,8 @@ This repository is a thinking space for business/product ideas. Ideas move throu
    - Current phase (the latest artifact with `status: complete`, or the one with `status: in-progress`)
    - Last verdict (the most recent phase's `verdict` field)
    - Any overrides taken
-   - Any unresolved gaps (`gaps` arrays)
+   - Unresolved gaps (`gaps` entries where `resolved: false`) — count `significant` separately from `minor`
+   - Resolved gaps (`gaps` entries where `resolved: true`) — positive signal
 3. Present findings and route.
 
 ## What to Show the User
@@ -26,7 +27,7 @@ List each idea in a table:
 | Idea | Current Phase | Status | Last Verdict | Flags |
 |------|--------------|--------|-------------|-------|
 
-Where **Flags** surfaces: overrides taken, unresolved gaps, killer verdicts in prior phases.
+Where **Flags** surfaces: overrides taken, unresolved gaps (with `⚠` if any `significant`), killer verdicts in prior phases. If 2+ significant unresolved gaps, add `(decide evidence cap: medium)`; if 3+, `(decide evidence cap: weak)` — these warn the user that Gating Protocol B will apply when they reach idea-decide.
 
 Then: "Which idea do you want to work on, or do you have a new one?"
 
@@ -93,11 +94,17 @@ digraph idea_flow {
     mvp -> decide [label="proceed"];
     decide -> done [label="go / park / kill"];
 
-    // Back-arrows (advisory)
-    validate -> concept [label="gap found" style=dashed];
-    gtm -> validate [label="gap found" style=dashed];
-    feasibility -> gtm [label="gap found" style=dashed];
-    mvp -> feasibility [label="gap found" style=dashed];
+    // Back-arrows (advisory) — gaps may point to any earlier phase
+    validate -> concept [label="gap (advisory)" style=dashed];
+    gtm -> concept [label="gap (advisory)" style=dashed];
+    gtm -> validate [label="gap (advisory)" style=dashed];
+    feasibility -> concept [label="gap (advisory)" style=dashed];
+    feasibility -> validate [label="gap (advisory)" style=dashed];
+    feasibility -> gtm [label="gap (advisory)" style=dashed];
+    mvp -> concept [label="gap (advisory)" style=dashed];
+    mvp -> validate [label="gap (advisory)" style=dashed];
+    mvp -> gtm [label="gap (advisory)" style=dashed];
+    mvp -> feasibility [label="gap (advisory)" style=dashed];
 }
 ```
 

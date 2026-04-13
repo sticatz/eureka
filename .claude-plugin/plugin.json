@@ -1,9 +1,9 @@
 {
-  "name": "idea-incubator",
+  "name": "eureka",
   "description": "Push business ideas from raw thought to a defensible go/park/kill verdict. 8 skills guide you through structured thinking: concept, validation, GTM, feasibility, MVP scoping, and a terminal decision.",
   "version": "1.0.0",
   "author": {
-    "name": "brunoteo"
+    "name": "sticatz"
   },
-  "repository": "https://github.com/brunoteo/idea-incubator"
+  "repository": "https://github.com/sticatz/eureka"
 }

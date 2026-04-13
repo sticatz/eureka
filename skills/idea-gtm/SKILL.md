@@ -19,6 +19,7 @@ How does this idea reach its customers? The best product with no path to users i
    - If either has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `GTM.md` exists — if so, pick up where things left off.
 6. Read both priors to ground the conversation — you need the target user, their problem, and the alternatives landscape.
+7. **Gap resolution scan (Protocol B' — rerun case only):** If GTM.md already exists, also read every later artifact in the folder (`FEASIBILITY.md`, `MVP.md`) and collect every `gaps` entry where `phase: gtm` and `resolved: false`. Surface them to the user per CONVENTIONS.md Protocol B'. At phase completion, flip `resolved: true` + `resolved_in: <YYYY-MM-DD>` on the addressed entries in the downstream artifacts. Prose-only edits are forbidden; touch only the matching `gaps` entries.
 
 ## Transition Graph
 
@@ -28,10 +29,10 @@ digraph gtm {
     gate [label="Gate check:\nCONCEPT.md + VALIDATION.md\ncomplete?" shape=diamond];
     explore [label="Explore:\nchannels, positioning,\ncold start, costs"];
     drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in validation?" shape=diamond];
+    gap [label="Gap in any\nearlier phase?" shape=diamond];
     complete [label="Phase complete" shape=ellipse];
     feasibility [label="/idea-feasibility" shape=box];
-    validate [label="/idea-validate\n(back-arrow)" shape=box];
+    earlier [label="/idea-concept or\n/idea-validate\n(back-arrow, advisory)" shape=box];
     prior [label="Missing prior phase" shape=box];
 
     entry -> gate;
@@ -39,9 +40,9 @@ digraph gtm {
     gate -> prior [label="missing / incomplete"];
     explore -> drift [label="topic drifts"];
     drift -> explore [label="redirect (features/validation/pricing/verdict)"];
-    explore -> gap [label="distribution reveals validation gap"];
-    gap -> explore [label="note gap, continue"];
-    gap -> validate [label="back-arrow (advisory)" style=dashed];
+    explore -> gap [label="distribution reveals earlier-phase gap"];
+    gap -> explore [label="log gap entry, continue"];
+    gap -> earlier [label="user may rerun later (advisory)" style=dashed];
     explore -> complete [label="channels, positioning,\ncosts explored"];
     complete -> feasibility [label="proceed"];
     complete -> feasibility [label="proceed-with-caution" style=dashed];
@@ -107,6 +108,23 @@ Not just "which channels" but "in what order and why":
 - Time-to-results per channel. (SEO = months, paid = days.)
 
 If marketing costs make unit economics negative, surface this as a critical tension.
+
+## Handling Depth Gaps
+
+When the conversation reveals that an **earlier phase's work** is weaker than GTM requires — for example, a target user from concept that collapses under distribution pressure, or a validation claim that doesn't survive competitive-channel analysis — follow CONVENTIONS.md Protocol B:
+
+1. Append an entry to `GTM.md`'s frontmatter `gaps` array:
+   ```yaml
+   - phase: concept | validate
+     note: <1-line description of the gap>
+     severity: minor | significant
+     resolved: false
+     resolved_in: null
+   ```
+2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
+3. Proceed with GTM. Advisory, not blocking.
+
+Gaps may point to **any** earlier phase — not just validate. A GTM finding that invalidates the concept-level target user is a `concept` gap, not a `validate` one. Record it against the phase where the thinking actually happens. Multiple gaps in different phases can be logged on the same artifact.
 
 ## Red Flags
 

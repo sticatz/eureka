@@ -30,8 +30,12 @@ Synthesize all prior thinking into a terminal verdict: **go**, **park**, or **ki
    - Each phase's `verdict` (traffic light)
    - Each phase's `evidence_strength`
    - Every `overridden` / `override_reason` pair
-   - Every entry in each phase's `gaps` array
+   - Every entry in each phase's `gaps` array, split into:
+     - **Unresolved** (`resolved: false`) — count by severity
+     - **Resolved** (`resolved: true`) — note `resolved_in` date, treat as positive signal
    - All `key_risks` across phases
+
+   CONCEPT.md has no `gaps` field (first phase). Every other prior artifact does.
 
 ## Transition Graph
 
@@ -68,7 +72,7 @@ For each prior phase, state:
 - **Verdict:** proceed / proceed-with-caution / killer
 - **Evidence strength:** strong / medium / weak
 - **Override taken?** If yes, what was the reason?
-- **Gap noted?** If yes, what and in which earlier phase?
+- **Gaps logged in this artifact?** For each, list `{phase, severity, note}` and whether `resolved`.
 - **Key risks:** the risk tags
 
 This is the raw material. Present it honestly — don't spin it.
@@ -92,16 +96,22 @@ This is the raw material. Present it honestly — don't spin it.
 
 ### Step 3: Weigh overrides and gaps
 
-Overrides are signal:
+**Overrides are signal:**
 - An override with a strong reason ("hypothesis is cheap to test, worst case we lose 2 weeks") is a reasonable gamble.
 - An override with a weak reason ("I just want to try") is a yellow flag.
 - Multiple overrides compound — each one is a place where the analysis said "stop" and the user said "go."
 
-Unresolved gaps are signal:
-- A gap that was noted and left unaddressed means a dimension wasn't fully explored.
-- Multiple gaps suggest the analysis was rushed.
+**Unresolved gaps are signal.** Apply the threshold rule from CONVENTIONS.md Gating Protocol B:
 
-Weigh these explicitly. Don't just mention them — state how they affect the verdict.
+- Count `significant` unresolved gaps across all 4 downstream artifacts (VALIDATION, GTM, FEASIBILITY, MVP — CONCEPT has no gaps field).
+- **1 significant unresolved gap** → advisory note in Step 3, no cap.
+- **2 significant unresolved gaps** → the decide `evidence_strength` **cannot exceed `medium`**, regardless of how strong the prior phases looked individually.
+- **3+ significant unresolved gaps** → the decide `evidence_strength` **cannot exceed `weak`**. At this point, the recommended verdict is `park` at best unless the user articulates why the gaps are tolerable — and that articulation goes into DECISION.md verbatim.
+- Minor unresolved gaps accumulate as prose commentary but do not trigger the cap.
+
+**Resolved gaps are positive signal.** An entry where `resolved: true` means the user went back, closed the loop, and didn't just wave it away. Mention these in Step 3 as evidence that the analysis was iterated in good faith. Do not count them toward the cap.
+
+Weigh all of this explicitly. Don't just mention — state how it affects the verdict. If the cap kicks in, name it: "Two significant unresolved gaps (feasibility→gtm, mvp→concept) cap this decision's evidence_strength at medium, per Gating Protocol B."
 
 ### Step 4: Make a recommendation
 
@@ -164,7 +174,7 @@ override_reason: null
 ## Verdict: go | park | kill
 
 ## Evidence Inventory
-[Per-phase table: verdict, evidence_strength, overrides, gaps, key risks]
+[Per-phase table: verdict, evidence_strength, overrides, gaps (split into unresolved/resolved with severity), key risks]
 
 ## The Case For
 [Steel-manned argument for building — citing specific phase findings]
@@ -173,7 +183,7 @@ override_reason: null
 [Steel-manned argument against — not softened, citing specific phase findings]
 
 ## Override and Gap Analysis
-[How overrides and unresolved gaps affected the verdict]
+[How overrides and unresolved gaps affected the verdict. Apply the threshold rule explicitly: count significant unresolved gaps, name the cap if triggered. Call out resolved gaps as positive signal.]
 
 ## Reasoning
 [Why this verdict — which findings drove it, how evidence was weighed]
@@ -188,5 +198,5 @@ override_reason: null
 **On completion:**
 - `status: complete`
 - `verdict: go | park | kill`
-- `evidence_strength` — overall quality of evidence across all 5 phases.
+- `evidence_strength` — overall quality of evidence across all 5 phases, respecting the significant-gaps cap from Gating Protocol B.
 - `key_risks` — the top risks, regardless of verdict.

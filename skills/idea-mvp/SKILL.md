@@ -18,7 +18,8 @@ Given everything known, what's the smallest concrete thing we ship to test the c
    - If any missing: "MVP needs all prior phases. Missing: [list]."
    - If any has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `MVP.md` exists — if so, pick up where things left off.
-6. Read all four priors. You need:
+6. **Gap resolution scan (Protocol B' — rerun case only):** MVP is the last downstream-authoring phase, so no later artifact references `phase: mvp` in its `gaps`. Nothing to scan. (DECISION.md does not log gaps — it weighs them.) Skip this step.
+7. Read all four priors. You need:
    - The problem and target user (CONCEPT.md)
    - The demand signal and evidence strength (VALIDATION.md)
    - The best channel and cold-start approach (GTM.md)
@@ -32,10 +33,10 @@ digraph mvp {
     gate [label="Gate check:\nall 4 priors complete?" shape=diamond];
     explore [label="Explore:\n7 MVP elements"];
     drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in feasibility?" shape=diamond];
+    gap [label="Gap in any\nearlier phase?" shape=diamond];
     complete [label="Phase complete" shape=ellipse];
     decide [label="/idea-decide" shape=box];
-    feasibility [label="/idea-feasibility\n(back-arrow)" shape=box];
+    earlier [label="/idea-concept or\n/idea-validate or\n/idea-gtm or\n/idea-feasibility\n(back-arrow, advisory)" shape=box];
     prior [label="Missing prior phase" shape=box];
 
     entry -> gate;
@@ -43,9 +44,9 @@ digraph mvp {
     gate -> prior [label="missing / incomplete"];
     explore -> drift [label="topic drifts"];
     drift -> explore [label="redirect (roadmap/feasibility/distribution/verdict)"];
-    explore -> gap [label="MVP scope reveals feasibility gap"];
-    gap -> explore [label="note gap, continue"];
-    gap -> feasibility [label="back-arrow (advisory)" style=dashed];
+    explore -> gap [label="MVP scope reveals earlier-phase gap"];
+    gap -> explore [label="log gap entry, continue"];
+    gap -> earlier [label="user may rerun later (advisory)" style=dashed];
     explore -> complete [label="all 8 elements concrete"];
     complete -> decide [label="proceed"];
 }
@@ -85,7 +86,24 @@ The number below which you stop. This must be set before launching, not after. "
 How long to build, how long to run the test. Total calendar time from start to verdict. Reference FEASIBILITY.md's complexity and resource estimates.
 
 ### 8. What's NOT Tested
-Explicitly list what the MVP leaves unknown. Reference unresolved assumptions from VALIDATION.md and gaps from earlier phases. This prevents the illusion that a successful MVP validates everything. Each untested dimension should be named with a note on when/how it gets tested later.
+Explicitly list what the MVP leaves unknown. Reference unresolved assumptions from VALIDATION.md and unresolved `gaps` entries from earlier artifacts (any entry where `resolved: false`). This prevents the illusion that a successful MVP validates everything. Each untested dimension should be named with a note on when/how it gets tested later.
+
+## Handling Depth Gaps
+
+MVP scoping often reveals weaknesses in **any** earlier phase — a hypothesis the concept never sharpened, a user segment validation didn't verify, a channel GTM glossed over, a technical constraint feasibility underpriced. Follow CONVENTIONS.md Protocol B:
+
+1. Append an entry to `MVP.md`'s frontmatter `gaps` array:
+   ```yaml
+   - phase: concept | validate | gtm | feasibility
+     note: <1-line description of the gap>
+     severity: minor | significant
+     resolved: false
+     resolved_in: null
+   ```
+2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
+3. Proceed with scoping. Advisory, not blocking.
+
+MVP's verdict is always `proceed` — it scopes, it does not kill. Anything fundamentally unworkable belongs in a gap entry against the phase where the flaw lives (often feasibility, sometimes earlier).
 
 ## Red Flags
 
@@ -109,7 +127,7 @@ When you hear any of these, respond with the pushback directly in prose. Do not 
 | Drift toward | Response |
 |---|---|
 | Full product roadmap | "This is the MVP, not v2. What tests the hypothesis? Everything else is later." |
-| Revisiting feasibility | "Feasibility is done. If the MVP scope reveals new feasibility concerns, I'll note the gap." |
+| Revisiting feasibility | "Feasibility is done. If the MVP scope reveals new feasibility concerns, I'll log a `feasibility` gap entry in this artifact's frontmatter and flag it for decide." |
 | Distribution details | "GTM has the channel strategy. The MVP question is: what do we put in front of those people?" |
 | Verdict | "Almost — let decide look at this MVP scope and make the call." |
 
@@ -171,7 +189,7 @@ Adapt to what emerged.
 
 **On completion:**
 - `status: complete`
-- `verdict: proceed` — always. MVP scopes; it does not kill. If the scope reveals something fundamentally unworkable, that's a gap in feasibility (write a back-arrow), not an MVP verdict.
+- `verdict: proceed` — always. MVP scopes; it does not kill. If the scope reveals something fundamentally unworkable, log a gap entry against the phase where the flaw lives (usually `feasibility`, but it can be any earlier phase), not an MVP verdict.
 - `evidence_strength: n/a` — MVP is a proposal, not evidence.
 - `key_risks` — what could make the test invalid, or what assumptions the MVP relies on.
 
