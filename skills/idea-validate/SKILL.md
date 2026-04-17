@@ -1,6 +1,6 @@
 ---
 name: idea-validate
-description: Use when an idea has a solid concept and the user wants to interrogate whether the problem is real, who has it, and what alternatives exist. Trigger on "is the problem real?", "who else solves this?", "do people actually need this?", or when moving from concept to validation. Requires CONCEPT.md to exist. Do NOT use for initial brainstorming (idea-concept), distribution (idea-gtm), feasibility (idea-feasibility), MVP scoping (idea-mvp), or verdicts (idea-decide).
+description: Use when an idea has a solid concept and the user wants to interrogate whether the problem is real, who has it, and what alternatives exist. Trigger on "is the problem real?", "who else solves this?", "do people actually need this?", or when moving from concept to validation. Requires CONCEPT.md to exist. Do NOT use for initial brainstorming (idea-concept) or distribution (idea-gtm).
 argument-hint: [idea-name]
 ---
 
@@ -19,35 +19,7 @@ Interrogate whether the problem is real, who has it, how painful it is, and what
    - If `CONCEPT.md` has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `VALIDATION.md` exists — if so, read it and pick up where things left off.
 6. Read `CONCEPT.md` to ground the conversation — you need the problem statement, target user, and differentiation claim.
-7. **Gap resolution scan (Protocol B' — rerun case only):** If VALIDATION.md already exists (this is a rerun), also read every later artifact in the folder (`GTM.md`, `FEASIBILITY.md`, `MVP.md`) and collect every `gaps` entry where `phase: validate` and `resolved: false`. If any exist, surface them at the top of the conversation per CONVENTIONS.md Protocol B'. Ask the user which ones this rerun will address. At phase completion, flip `resolved: true` + `resolved_in: <YYYY-MM-DD>` on the addressed entries in the downstream artifacts. Do not modify any prose in those files.
-
-## Transition Graph
-
-```dot
-digraph validate {
-    entry [label="Phase starts" shape=ellipse];
-    gate [label="Gate check:\nCONCEPT.md complete?" shape=diamond];
-    explore [label="Explore:\nproblem reality,\nwho has it,\nalternatives"];
-    drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in any\nearlier phase?" shape=diamond];
-    complete [label="Phase complete" shape=ellipse];
-    gtm [label="/idea-gtm" shape=box];
-    concept [label="/idea-concept\n(back-arrow, advisory)" shape=box];
-
-    entry -> gate;
-    gate -> explore [label="pass"];
-    gate -> concept [label="missing / incomplete"];
-    explore -> drift [label="topic drifts"];
-    drift -> explore [label="redirect (tech/distribution/pricing/verdict)"];
-    explore -> gap [label="validation reveals earlier-phase gap"];
-    gap -> explore [label="log gap entry, continue"];
-    gap -> concept [label="user may rerun later (advisory)" style=dashed];
-    explore -> complete [label="problem reality + alternatives mapped"];
-    complete -> gtm [label="proceed"];
-    complete -> gtm [label="proceed-with-caution" style=dashed];
-    complete -> gtm [label="killer (override required)" style=dotted];
-}
-```
+7. **Gap resolution scan (rerun only):** If `VALIDATION.md` already exists, run Protocol B' per `CONVENTIONS.md` — scan `GTM.md`, `FEASIBILITY.md`, `MVP.md` for `gaps` entries where `phase: validate` and `resolved: false`, surface them, flip `resolved` on confirmed resolution.
 
 ## How to Explore
 
@@ -100,20 +72,7 @@ If WebSearch is unavailable or returns nothing useful, don't silently skip — t
 
 ## Handling Depth Gaps
 
-When the conversation reveals that an **earlier phase's work** is weaker than the validation findings require — not a claim this skill should revise itself, but a depth gap in prior thinking — follow CONVENTIONS.md Protocol B:
-
-1. Append an entry to `VALIDATION.md`'s frontmatter `gaps` array:
-   ```yaml
-   - phase: concept
-     note: <1-line description of the gap>
-     severity: minor | significant
-     resolved: false
-     resolved_in: null
-   ```
-2. Tell the user: "I'm noting a <severity> gap in concept — <summary>. You can rerun `/eureka:idea-concept` later to close it, or leave it for idea-decide to weigh. Continuing."
-3. Proceed with validation. Advisory, not blocking.
-
-At validate's phase, the only earlier phase is `concept`. Pick severity honestly — `significant` means the weakness could flip the eventual decide verdict.
+When the conversation reveals that **earlier phase work** is weaker than validation findings require, log a `gaps` entry per `CONVENTIONS.md` Protocol B and continue — advisory, not blocking. At validate, the only earlier phase is `concept`. Pick severity honestly (`significant` = could flip the decide verdict).
 
 ## Red Flags
 

@@ -1,6 +1,6 @@
 ---
 name: idea-mvp
-description: Use when an idea has been through concept, validation, GTM, and feasibility, and the user wants to scope the minimum viable product — the smallest concrete test of the core hypothesis. Trigger on "what should we build first?", "MVP", "smallest test", "what do we ship?", or when moving from feasibility to MVP. Requires all 4 prior artifacts. Do NOT use for brainstorming (idea-concept), validation (idea-validate), distribution (idea-gtm), feasibility (idea-feasibility), or verdicts (idea-decide).
+description: Use when an idea has been through concept, validation, GTM, and feasibility, and the user wants to scope the minimum viable product — the smallest concrete test of the core hypothesis. Trigger on "what should we build first?", "MVP", "smallest test", "what do we ship?", or when moving from feasibility to MVP. Requires all 4 prior artifacts. Do NOT use for feasibility (idea-feasibility) or final verdicts (idea-decide).
 argument-hint: [idea-name]
 ---
 
@@ -18,39 +18,12 @@ Given everything known, what's the smallest concrete thing we ship to test the c
    - If any missing: "MVP needs all prior phases. Missing: [list]."
    - If any has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `MVP.md` exists — if so, pick up where things left off.
-6. **Gap resolution scan (Protocol B' — rerun case only):** MVP is the last downstream-authoring phase, so no later artifact references `phase: mvp` in its `gaps`. Nothing to scan. (DECISION.md does not log gaps — it weighs them.) Skip this step.
+6. **Gap resolution scan:** Skip — MVP is the last downstream-authoring phase, so no later artifact references `phase: mvp`. DECISION.md weighs gaps, doesn't log them.
 7. Read all four priors. You need:
    - The problem and target user (CONCEPT.md)
    - The demand signal and evidence strength (VALIDATION.md)
    - The best channel and cold-start approach (GTM.md)
    - The technical complexity, cost structure, and constraints (FEASIBILITY.md)
-
-## Transition Graph
-
-```dot
-digraph mvp {
-    entry [label="Phase starts" shape=ellipse];
-    gate [label="Gate check:\nall 4 priors complete?" shape=diamond];
-    explore [label="Explore:\n7 MVP elements"];
-    drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in any\nearlier phase?" shape=diamond];
-    complete [label="Phase complete" shape=ellipse];
-    decide [label="/idea-decide" shape=box];
-    earlier [label="/idea-concept or\n/idea-validate or\n/idea-gtm or\n/idea-feasibility\n(back-arrow, advisory)" shape=box];
-    prior [label="Missing prior phase" shape=box];
-
-    entry -> gate;
-    gate -> explore [label="pass"];
-    gate -> prior [label="missing / incomplete"];
-    explore -> drift [label="topic drifts"];
-    drift -> explore [label="redirect (roadmap/feasibility/distribution/verdict)"];
-    explore -> gap [label="MVP scope reveals earlier-phase gap"];
-    gap -> explore [label="log gap entry, continue"];
-    gap -> earlier [label="user may rerun later (advisory)" style=dashed];
-    explore -> complete [label="all 8 elements concrete"];
-    complete -> decide [label="proceed"];
-}
-```
 
 ## How to Explore
 
@@ -90,18 +63,7 @@ Explicitly list what the MVP leaves unknown. Reference unresolved assumptions fr
 
 ## Handling Depth Gaps
 
-MVP scoping often reveals weaknesses in **any** earlier phase — a hypothesis the concept never sharpened, a user segment validation didn't verify, a channel GTM glossed over, a technical constraint feasibility underpriced. Follow CONVENTIONS.md Protocol B:
-
-1. Append an entry to `MVP.md`'s frontmatter `gaps` array:
-   ```yaml
-   - phase: concept | validate | gtm | feasibility
-     note: <1-line description of the gap>
-     severity: minor | significant
-     resolved: false
-     resolved_in: null
-   ```
-2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
-3. Proceed with scoping. Advisory, not blocking.
+MVP scoping often reveals weaknesses in **any** earlier phase — a hypothesis the concept never sharpened, a user segment validation didn't verify, a channel GTM glossed over, a technical constraint feasibility underpriced. Log a `gaps` entry per `CONVENTIONS.md` Protocol B and continue. Advisory, not blocking.
 
 MVP's verdict is always `proceed` — it scopes, it does not kill. Anything fundamentally unworkable belongs in a gap entry against the phase where the flaw lives (often feasibility, sometimes earlier).
 

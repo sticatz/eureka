@@ -23,13 +23,15 @@ All downstream phase artifacts use this frontmatter:
 phase: validate | gtm | feasibility | mvp
 status: in-progress | complete
 verdict: null | proceed | proceed-with-caution | killer
-evidence_strength: strong | medium | weak | n/a
+evidence_strength: null | strong | medium | weak | n/a
 key_risks: []
 overridden: false
 override_reason: null
 gaps: []
 ---
 ```
+
+`evidence_strength` is `null` while `status: in-progress` for phases that assess it on completion (validate, gtm, feasibility). `n/a` is the terminal value for phases that do not assess evidence (mvp). Concept starts `null` and settles to strong/medium/weak at completion.
 
 Each entry in `gaps` is an object:
 
@@ -58,7 +60,7 @@ CONCEPT.md omits the `gaps` field — it is the first phase and has no prior wor
 phase: concept
 status: in-progress | complete
 verdict: null | proceed | proceed-with-caution | killer
-evidence_strength: strong | medium | weak | n/a
+evidence_strength: null | strong | medium | weak
 key_risks: []
 overridden: false
 override_reason: null
@@ -71,8 +73,8 @@ override_reason: null
 ---
 phase: decide
 status: in-progress | complete
-verdict: go | park | kill
-evidence_strength: strong | medium | weak
+verdict: null | go | park | kill
+evidence_strength: null | strong | medium | weak
 key_risks: []
 overridden: false
 override_reason: null
@@ -97,14 +99,14 @@ override_reason: null
 
 When a skill starts, it reads frontmatter from all required prior artifacts. If **any prior has `verdict: killer`** and the current artifact hasn't already recorded an override, the skill **refuses to proceed**:
 
-> **Refusing to start.** `<PRIOR>.md` concluded with verdict=`killer` — <1-line summary from prior's prose>. Continuing means gambling that this finding is wrong or tolerable. If you want to proceed anyway, tell me why and I'll record it.
+> **Refusing to start.** `<PRIOR>.md` concluded with verdict=`killer` — <1-line summary from prior's prose>. Continuing means gambling that this finding is wrong or tolerable. If you want to proceed anyway, tell me why and I'll record it. Weak reasons (e.g. "I just want to try") will count against you at `idea-decide` — the stronger your reason, the better it holds up in the final weighing.
 
 If the user provides a reason, write to the current artifact's frontmatter:
 ```yaml
 overridden: true
 override_reason: "user's reason verbatim"
 ```
-Then proceed. If the user says "just do it" without a reason, refuse again. Override requires a reason.
+Then proceed. If the user says "just do it" without a reason, refuse again. Override requires a reason. The reason is captured verbatim and weighed by `idea-decide`: a substantive rationale ("hypothesis is cheap to test — 2 weeks max downside") is treated as a reasonable gamble; a weak one ("gut feeling") becomes a yellow flag in the final verdict.
 
 ### B. Depth-gap back-arrow (advisory, non-blocking)
 
