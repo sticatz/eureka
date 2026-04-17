@@ -1,6 +1,6 @@
 ---
 name: idea-gtm
-description: Use when an idea has been through concept and validation and the user wants to explore go-to-market strategy — how customers find this, channel selection, cold start, acquisition costs, positioning, and moat. Trigger on "how do we reach customers?", "go-to-market", "distribution", "cold start", or when moving from validation to GTM. Requires CONCEPT.md and VALIDATION.md. Do NOT use for brainstorming (idea-concept), problem validation (idea-validate), feasibility (idea-feasibility), MVP scoping (idea-mvp), or verdicts (idea-decide).
+description: Use when an idea has been through concept and validation and the user wants to explore go-to-market strategy — how customers find this, channel selection, cold start, acquisition costs, positioning, and moat. Trigger on "how do we reach customers?", "go-to-market", "distribution", "cold start", or when moving from validation to GTM. Requires CONCEPT.md and VALIDATION.md. Do NOT use for problem validation (idea-validate) or feasibility (idea-feasibility).
 argument-hint: [idea-name]
 ---
 
@@ -19,36 +19,7 @@ How does this idea reach its customers? The best product with no path to users i
    - If either has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `GTM.md` exists — if so, pick up where things left off.
 6. Read both priors to ground the conversation — you need the target user, their problem, and the alternatives landscape.
-7. **Gap resolution scan (Protocol B' — rerun case only):** If GTM.md already exists, also read every later artifact in the folder (`FEASIBILITY.md`, `MVP.md`) and collect every `gaps` entry where `phase: gtm` and `resolved: false`. Surface them to the user per CONVENTIONS.md Protocol B'. At phase completion, flip `resolved: true` + `resolved_in: <YYYY-MM-DD>` on the addressed entries in the downstream artifacts. Prose-only edits are forbidden; touch only the matching `gaps` entries.
-
-## Transition Graph
-
-```dot
-digraph gtm {
-    entry [label="Phase starts" shape=ellipse];
-    gate [label="Gate check:\nCONCEPT.md + VALIDATION.md\ncomplete?" shape=diamond];
-    explore [label="Explore:\nchannels, positioning,\ncold start, costs"];
-    drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in any\nearlier phase?" shape=diamond];
-    complete [label="Phase complete" shape=ellipse];
-    feasibility [label="/idea-feasibility" shape=box];
-    earlier [label="/idea-concept or\n/idea-validate\n(back-arrow, advisory)" shape=box];
-    prior [label="Missing prior phase" shape=box];
-
-    entry -> gate;
-    gate -> explore [label="pass"];
-    gate -> prior [label="missing / incomplete"];
-    explore -> drift [label="topic drifts"];
-    drift -> explore [label="redirect (features/validation/pricing/verdict)"];
-    explore -> gap [label="distribution reveals earlier-phase gap"];
-    gap -> explore [label="log gap entry, continue"];
-    gap -> earlier [label="user may rerun later (advisory)" style=dashed];
-    explore -> complete [label="channels, positioning,\ncosts explored"];
-    complete -> feasibility [label="proceed"];
-    complete -> feasibility [label="proceed-with-caution" style=dashed];
-    complete -> feasibility [label="killer (override required)" style=dotted];
-}
-```
+7. **Gap resolution scan (rerun only):** If `GTM.md` already exists, run Protocol B' per `CONVENTIONS.md` — scan `FEASIBILITY.md`, `MVP.md` for `gaps` entries where `phase: gtm` and `resolved: false`, surface them, flip `resolved` on confirmed resolution.
 
 ## How to Explore
 
@@ -111,20 +82,9 @@ If marketing costs make unit economics negative, surface this as a critical tens
 
 ## Handling Depth Gaps
 
-When the conversation reveals that an **earlier phase's work** is weaker than GTM requires — for example, a target user from concept that collapses under distribution pressure, or a validation claim that doesn't survive competitive-channel analysis — follow CONVENTIONS.md Protocol B:
+When GTM work reveals weaknesses in **earlier phase thinking** — e.g., a target user that collapses under distribution pressure, or a validation claim that doesn't survive channel analysis — log a `gaps` entry per `CONVENTIONS.md` Protocol B and continue. Advisory, not blocking.
 
-1. Append an entry to `GTM.md`'s frontmatter `gaps` array:
-   ```yaml
-   - phase: concept | validate
-     note: <1-line description of the gap>
-     severity: minor | significant
-     resolved: false
-     resolved_in: null
-   ```
-2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
-3. Proceed with GTM. Advisory, not blocking.
-
-Gaps may point to **any** earlier phase — not just validate. A GTM finding that invalidates the concept-level target user is a `concept` gap, not a `validate` one. Record it against the phase where the thinking actually happens. Multiple gaps in different phases can be logged on the same artifact.
+Gaps may point to **any** earlier phase. A GTM finding that invalidates the concept-level target user is a `concept` gap, not a `validate` one. Record it against the phase where the thinking lives. Multiple gaps in different phases can be logged on the same artifact.
 
 ## Red Flags
 

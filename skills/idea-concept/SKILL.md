@@ -1,6 +1,6 @@
 ---
 name: idea-concept
-description: Use when the user wants to capture, explore, or refine a new business/product idea. Trigger on "I have an idea for...", "what if we built...", "is this problem worth solving?", or any early-stage idea exploration. Do NOT use for problem validation (idea-validate), distribution (idea-gtm), feasibility analysis (idea-feasibility), MVP scoping (idea-mvp), or verdicts (idea-decide).
+description: Use when the user wants to capture, explore, or refine a new business/product idea. Trigger on "I have an idea for...", "what if we built...", "is this problem worth solving?", or any early-stage idea exploration. Do NOT use for problem validation (idea-validate) or final verdicts (idea-decide).
 argument-hint: [idea-name]
 ---
 
@@ -16,29 +16,6 @@ Capture and refine an idea until the problem, target user, why-now, and differen
 4. Check if `CONCEPT.md` exists:
    - **Exists:** Read it. If `status: in-progress`, pick up where things left off. Do NOT start over. If `status: complete`, tell the user and suggest the next phase.
    - **Does not exist:** Create the directory if needed. Start fresh with Pass 1.
-
-## Transition Graph
-
-```dot
-digraph concept {
-    entry [label="Phase starts" shape=ellipse];
-    dump [label="Pass 1:\nFree dump"];
-    sharpen [label="Pass 2:\nSharpen 4 dimensions"];
-    drift [label="Drift detected?" shape=diamond];
-    complete [label="Phase complete" shape=ellipse];
-    validate [label="/idea-validate" shape=box];
-
-    entry -> dump;
-    dump -> sharpen [label="user done dumping"];
-    sharpen -> drift [label="topic drifts"];
-    drift -> sharpen [label="still concept territory"];
-    drift -> sharpen [label="redirect (tech/pricing/verdict/distribution)"];
-    sharpen -> complete [label="all 4 dimensions sharp\nor gaps acknowledged"];
-    complete -> validate [label="proceed"];
-    complete -> validate [label="proceed-with-caution" style=dashed];
-    complete -> validate [label="killer (override required)" style=dotted];
-}
-```
 
 ## Pass 1 — Free Dump
 
@@ -132,7 +109,7 @@ When writing or updating, use this scaffolding — but adapt sections to what ac
 phase: concept
 status: in-progress
 verdict: null
-evidence_strength: n/a
+evidence_strength: null
 key_risks: []
 overridden: false
 override_reason: null

@@ -1,6 +1,6 @@
 ---
 name: idea-feasibility
-description: Use when an idea has been through concept, validation, and GTM, and the user wants to evaluate whether it can be built, run, afforded, and legally operated. Trigger on "can we build this?", "is this feasible?", "what would it cost?", "any legal issues?", or when moving from GTM to feasibility. Requires CONCEPT.md, VALIDATION.md, and GTM.md. Do NOT use for brainstorming (idea-concept), validation (idea-validate), distribution (idea-gtm), MVP scoping (idea-mvp), or verdicts (idea-decide).
+description: Use when an idea has been through concept, validation, and GTM, and the user wants to evaluate whether it can be built, run, afforded, and legally operated. Trigger on "can we build this?", "is this feasible?", "what would it cost?", "any legal issues?", or when moving from GTM to feasibility. Requires CONCEPT.md, VALIDATION.md, and GTM.md. Do NOT use for distribution (idea-gtm) or MVP scoping (idea-mvp).
 argument-hint: [idea-name]
 ---
 
@@ -18,42 +18,13 @@ Can we build, run, afford, and legally operate this at the scale GTM implies? Fo
    - If any missing: "Feasibility needs concept, validation, and GTM. Missing: [list]."
    - If any has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
 5. Check if `FEASIBILITY.md` exists — if so, pick up where things left off.
-6. **Gap resolution scan (Protocol B' — rerun case only):** If FEASIBILITY.md already exists, also read `MVP.md` (the only later artifact that can reference feasibility) and collect every `gaps` entry where `phase: feasibility` and `resolved: false`. Surface them to the user per CONVENTIONS.md Protocol B'. At phase completion, flip `resolved: true` + `resolved_in: <YYYY-MM-DD>` on the addressed entries in MVP.md. Touch only the matching `gaps` entries — no prose edits.
+6. **Gap resolution scan (rerun only):** If `FEASIBILITY.md` already exists, run Protocol B' per `CONVENTIONS.md` — scan `MVP.md` (the only later artifact) for `gaps` entries where `phase: feasibility` and `resolved: false`, surface them, flip `resolved` on confirmed resolution.
 7. Read all three priors. You need:
    - The target user and problem (CONCEPT.md)
    - The demand signal and alternatives (VALIDATION.md)
    - The channels, volume expectations, and cost structure (GTM.md)
 
 **Key framing:** Feasibility is judged *against the scale GTM implies*. "Can we build it?" isn't abstract — it's "can we build it to serve the volume and channels GTM describes, at a cost that works?"
-
-## Transition Graph
-
-```dot
-digraph feasibility {
-    entry [label="Phase starts" shape=ellipse];
-    gate [label="Gate check:\nCONCEPT.md + VALIDATION.md\n+ GTM.md complete?" shape=diamond];
-    explore [label="Explore:\ntechnical, operational,\nresource, legal"];
-    drift [label="Drift detected?" shape=diamond];
-    gap [label="Gap in any\nearlier phase?" shape=diamond];
-    complete [label="Phase complete" shape=ellipse];
-    mvp [label="/idea-mvp" shape=box];
-    earlier [label="/idea-concept or\n/idea-validate or\n/idea-gtm\n(back-arrow, advisory)" shape=box];
-    prior [label="Missing prior phase" shape=box];
-
-    entry -> gate;
-    gate -> explore [label="pass"];
-    gate -> prior [label="missing / incomplete"];
-    explore -> drift [label="topic drifts"];
-    drift -> explore [label="redirect (problem/distribution/mvp/verdict)"];
-    explore -> gap [label="feasibility reveals earlier-phase gap"];
-    gap -> explore [label="log gap entry, continue"];
-    gap -> earlier [label="user may rerun later (advisory)" style=dashed];
-    explore -> complete [label="all 4 sub-concerns explored"];
-    complete -> mvp [label="proceed"];
-    complete -> mvp [label="proceed-with-caution" style=dashed];
-    complete -> mvp [label="killer (override required)" style=dotted];
-}
-```
 
 ## How to Explore
 
@@ -96,20 +67,9 @@ Don't assume compliance is simple. "We'll just handle it" is a red flag. If the 
 
 ## Handling Depth Gaps
 
-Feasibility often exposes weaknesses in **any** earlier phase — a concept target user that can't be served at technical cost, a validation claim that ignores operational burden, a GTM channel whose scale implies infrastructure nobody priced. Follow CONVENTIONS.md Protocol B:
+Feasibility often exposes weaknesses in **any** earlier phase — a concept target user that can't be served at technical cost, a validation claim that ignores operational burden, a GTM channel whose scale implies infrastructure nobody priced. Log a `gaps` entry per `CONVENTIONS.md` Protocol B and continue. Advisory, not blocking.
 
-1. Append an entry to `FEASIBILITY.md`'s frontmatter `gaps` array:
-   ```yaml
-   - phase: concept | validate | gtm
-     note: <1-line description of the gap>
-     severity: minor | significant
-     resolved: false
-     resolved_in: null
-   ```
-2. Tell the user: "I'm noting a <severity> gap in <phase> — <summary>. You can rerun `/eureka:idea-<phase>` later to close it, or leave it for idea-decide to weigh. Continuing."
-3. Proceed with feasibility. Advisory, not blocking.
-
-A feasibility finding may produce gaps in multiple earlier phases at once — record each one separately, against the phase where the thinking actually lives. Pick severity honestly (`significant` = could flip the decide verdict).
+A single feasibility finding may produce gaps in multiple earlier phases — record each separately against the phase where the thinking lives. Pick severity honestly (`significant` = could flip the decide verdict).
 
 ## Red Flags
 
