@@ -62,10 +62,18 @@ Surface prominently, before the findings:
 Two or three bullets per artifact, drawn from the prose: the strongest evidence, the biggest
 concern, the key tension or open question.
 
+### Tests
+
+From `tests`, one row per experiment: id, method, the assumption it targets, the pre-registered
+kill threshold, and the outcome. Mark any still `running` and any `falsified`.
+
+If there are none, say so in one line: *"No assumptions have been tested against the world yet."*
+That is the most important thing this report can tell someone about the evidence base.
+
 ### Open assumptions
 
-Every `**Assumption:**` marker across all artifacts. These are the claims that were never
-evidenced.
+Every entry in `open_assumptions` — the claims that were never evidenced — with the artifact each
+came from. Note which have a test against them and which do not.
 
 ### Sources
 

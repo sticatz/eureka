@@ -19,3 +19,8 @@ gaps:
     resolved_in: null
 ---
 # Validation
+
+## Evidence vs Assumptions
+
+- **Assumption:** dog owners in dense cities will pay a premium for same-day walks
+- **Assumption:** existing apps have poor walker retention

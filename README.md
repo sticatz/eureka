@@ -5,9 +5,9 @@ verdict. Opinionated, evidence-demanding, allergic to hand-waving.
 
 ## What this is
 
-Eight skills — six phases, a router, and a read-only summary — that guide structured thinking about
-whether an idea is worth building. Each phase writes a persistent markdown artifact into your own
-workspace. The output is a decision you can defend.
+Nine skills — six phases, a router, a read-only summary, and an experiment runner — that guide
+structured thinking about whether an idea is worth building. Each phase writes a persistent markdown
+artifact into your own workspace. The output is a decision you can defend.
 
 This is not a brainstorming pad.
 
@@ -72,6 +72,8 @@ Every skill prints the absolute path it resolved before writing anything.
 /eureka:idea-mvp          What's the cheapest test that could prove you wrong?
 /eureka:idea-decide       Go, park, or kill. With reasoning.
 /eureka:idea-recap        Read-only summary, at any point.
+
+/eureka:idea-test         Any time: test one assumption against the world, and record the result.
 ```
 
 GTM comes before feasibility on purpose: distribution kills more ideas than technology, and
@@ -91,6 +93,11 @@ Three things make that more than a tone instruction:
   separate agent reads only the files — never the conversation — and builds the strongest case for
   killing the idea. Its findings go into the record verbatim, and its evidence grade overrides a
   more generous one.
+- **Assumptions can be tested, and results come back in.** `idea-test` takes the riskiest
+  unevidenced claim, picks the cheapest experiment that could falsify it, and makes you write the
+  kill threshold *before* you run it. On debrief it compares the filtered result against that
+  number and writes the outcome back into the artifact the claim came from. A falsified assumption
+  withholds `go` from then on.
 - **Interview evidence gets filtered.** Five friends saying "I'd totally use that" is the most
   common way a weak idea acquires a strong score. Eureka coaches non-leading questions and runs
   what comes back through an admission rubric before any of it counts.
@@ -110,6 +117,10 @@ and you are asked once, not at every subsequent phase.
 When a later phase finds a gap in earlier work, it logs it rather than silently patching it.
 Unresolved significant gaps cap the final evidence strength; closed ones count in your favour.
 
+`idea-test` writes to `ideas/<slug>/tests/`. Those files are the only place in the folder where a
+claim was checked against the world rather than reasoned about, so `idea-decide` weighs them above
+everything else — and reports it plainly when there are none.
+
 `idea-decide` also writes `SUMMARY.md` — the same conclusion in plain language, with sources and
 dates, and none of Eureka's internal vocabulary. That is the one to send to a cofounder.
 
@@ -128,6 +139,8 @@ dates, and none of Eureka's internal vocabulary. That is the one to send to a co
 python3 scripts/eureka.py root              # where would ideas go from here?
 python3 scripts/eureka.py status [slug]     # computed state as JSON
 python3 scripts/eureka.py validate [slug]   # check frontmatter against the schema
+python3 scripts/eureka.py assumptions [slug]  # every unevidenced claim, by artifact
+python3 scripts/eureka.py tests [slug]        # experiments and their outcomes
 evals/run.sh                                # fixtures + manifest validation
 ```
 

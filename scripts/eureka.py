@@ -3,13 +3,17 @@
 
 Skills call this instead of resolving paths or counting gaps by eye.
 
-    eureka.py root [--create]     Print the absolute ideas root.
-    eureka.py status [<slug>]     Dump every artifact's state as JSON.
-    eureka.py validate [<slug>]   Check frontmatter against the schema.
+    eureka.py root [--create]       Print the absolute ideas root.
+    eureka.py status [<slug>]       Dump every artifact's state as JSON.
+    eureka.py validate [<slug>]     Check frontmatter against the schema.
+    eureka.py assumptions [<slug>]  List every unevidenced claim, by artifact.
+    eureka.py tests [<slug>]        List experiments and their outcomes.
 
 Why this exists: the ideas root must resolve to the same directory on every
-invocation regardless of the session's working directory, and the gap
-threshold rule is arithmetic that must not be done from memory.
+invocation regardless of the session's working directory, the gap threshold
+rule is arithmetic that must not be done from memory, and a pre-registered
+kill threshold is only worth something if the comparison against it is
+mechanical rather than remembered after the fact.
 """
 
 import argparse
@@ -35,6 +39,22 @@ TERMINAL_VERDICTS = {"go", "park", "kill"}
 EVIDENCE = {"strong", "medium", "weak", "n/a"}
 STATUSES = {"in-progress", "complete"}
 SEVERITIES = {"minor", "significant"}
+
+# Experiments. Ordered cheapest first — idea-test walks this ladder and stops
+# at the first rung that could actually falsify the assumption under test.
+METHODS = [
+    "desk-research",
+    "interviews",
+    "smoke-test",
+    "pre-sale",
+    "concierge",
+    "wizard-of-oz",
+    "built-mvp",
+]
+TEST_STATUSES = {"designed", "running", "complete", "abandoned"}
+TEST_OUTCOMES = {"supported", "falsified", "inconclusive"}
+
+ASSUMPTION_RE = re.compile(r"^\s*[-*]?\s*\*\*Assumption:\*\*\s*(.+?)\s*$", re.M)
 
 
 # --------------------------------------------------------------------------
@@ -145,6 +165,73 @@ def read_artifact(path):
 
 
 # --------------------------------------------------------------------------
+# assumptions and tests
+# --------------------------------------------------------------------------
+
+def scan_assumptions(folder):
+    """Every `**Assumption:** <claim>` marker across the artifacts.
+
+    These are the claims the analysis could not source. They are the input to
+    idea-test: the ranked top of this list is what the next experiment exists
+    to falsify.
+    """
+    out = []
+    for name in ARTIFACTS:
+        p = folder / name
+        if not p.exists():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for m in ASSUMPTION_RE.finditer(text):
+            out.append({
+                "claim": m.group(1).strip(),
+                "artifact": name,
+                "phase": PHASE_OF[name],
+                "line": text[:m.start()].count("\n") + 1,
+            })
+    return out
+
+
+def read_tests(folder):
+    """One entry per file in tests/, in id order."""
+    d = folder / "tests"
+    if not d.is_dir():
+        return []
+    out = []
+    for p in sorted(d.glob("*.md")):
+        fm, errs = read_artifact(p)
+        out.append({
+            "file": p.name,
+            "path": str(p),
+            "id": fm.get("id"),
+            "status": fm.get("status"),
+            "method": fm.get("method"),
+            "assumption": fm.get("assumption"),
+            "source_artifact": fm.get("source_artifact"),
+            "cost": fm.get("cost"),
+            "prediction": fm.get("prediction"),
+            "kill_threshold": fm.get("kill_threshold"),
+            "outcome": fm.get("outcome"),
+            "created": fm.get("created"),
+            "launched": fm.get("launched"),
+            "closed": fm.get("closed"),
+            "errors": errs,
+        })
+    return out
+
+
+def next_test_id(tests):
+    n = 0
+    for t in tests:
+        m = re.fullmatch(r"T(\d+)", str(t.get("id") or ""))
+        if m:
+            n = max(n, int(m.group(1)))
+    return f"T{n + 1:03d}"
+
+
+# --------------------------------------------------------------------------
 # status
 # --------------------------------------------------------------------------
 
@@ -247,6 +334,22 @@ def idea_state(folder):
         if a.get("verdict") == "killer" and ph not in overridden_phases:
             blockers.append(f"{ph} verdict is killer and is not overridden")
 
+    # A test result is the strongest evidence the system can hold, so it has to
+    # be able to move the verdict in both directions. A falsified assumption in
+    # a load-bearing phase withholds `go`; a test still running means the
+    # question it was designed to settle is not settled yet.
+    tests = read_tests(folder)
+    for t in tests:
+        if t.get("outcome") == "falsified":
+            blockers.append(
+                f"{t.get('id')} falsified an assumption in "
+                f"{t.get('source_artifact')}: {t.get('assumption')}"
+            )
+        elif t.get("status") == "running":
+            blockers.append(
+                f"{t.get('id')} is still running; it was designed to settle: {t.get('assumption')}"
+            )
+
     return {
         "slug": folder.name,
         "path": str(folder),
@@ -264,6 +367,10 @@ def idea_state(folder):
         "go_available": decide_ready and not blockers,
         "go_blockers": blockers,
         "revisit_trigger": phases.get("decide", {}).get("revisit_trigger"),
+        "tests": tests,
+        "next_test_id": next_test_id(tests),
+        "open_assumptions": scan_assumptions(folder),
+        "tested_assumptions": [t.get("assumption") for t in tests if t.get("outcome")],
     }
 
 
@@ -363,6 +470,64 @@ def validate_artifact(path):
     return problems
 
 
+def validate_test(path):
+    """Check one tests/*.md file.
+
+    The load-bearing checks are the pre-registration ones. A kill threshold
+    written after the result is known is not a kill threshold, and the whole
+    value of the mechanism is that the comparison cannot be renegotiated once
+    the number is in.
+    """
+    fm, errs = read_artifact(path)
+    problems = list(errs)
+
+    tid = fm.get("id")
+    if not re.fullmatch(r"T\d{3}", str(tid or "")):
+        problems.append(f"id must look like T001, got {tid!r}")
+
+    status = fm.get("status")
+    if status not in TEST_STATUSES:
+        problems.append(f"status must be one of {sorted(TEST_STATUSES)}, got {status!r}")
+
+    if fm.get("method") not in METHODS:
+        problems.append(f"method must be one of {METHODS}, got {fm.get('method')!r}")
+
+    if not fm.get("assumption"):
+        problems.append("assumption is required: quote the claim this test exists to falsify")
+    if fm.get("source_artifact") not in ARTIFACTS:
+        problems.append(f"source_artifact must be one of {ARTIFACTS}, got {fm.get('source_artifact')!r}")
+
+    # Pre-registration. Both must exist from the moment the test is designed.
+    if not fm.get("prediction"):
+        problems.append("prediction is required at design time")
+    if not fm.get("kill_threshold"):
+        problems.append("kill_threshold is required at design time — set it before launch, "
+                        "because afterwards you will rationalize anything")
+
+    outcome = fm.get("outcome")
+    if outcome is not None and outcome not in TEST_OUTCOMES:
+        problems.append(f"outcome must be null or one of {sorted(TEST_OUTCOMES)}, got {outcome!r}")
+    if status == "designed" and outcome is not None:
+        problems.append("outcome is set while status is 'designed': a result cannot predate the run")
+    if status == "complete" and outcome is None:
+        problems.append("status is complete but outcome is null")
+    if outcome is not None and not fm.get("closed"):
+        problems.append("outcome is set but closed date is empty")
+
+    for field, required in (("created", True), ("launched", False), ("closed", False)):
+        v = fm.get(field)
+        if v is None:
+            if required:
+                problems.append(f"{field} is required (YYYY-MM-DD)")
+        elif not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v)):
+            problems.append(f"{field} must be YYYY-MM-DD, got {v!r}")
+
+    if status in ("running", "complete") and not fm.get("launched"):
+        problems.append(f"status is {status!r} but launched date is empty")
+
+    return problems
+
+
 # --------------------------------------------------------------------------
 # cli
 # --------------------------------------------------------------------------
@@ -380,6 +545,12 @@ def main():
 
     p_val = sub.add_parser("validate", help="check frontmatter against the schema")
     p_val.add_argument("slug", nargs="?", help="limit to one idea")
+
+    p_asm = sub.add_parser("assumptions", help="list unevidenced claims by artifact")
+    p_asm.add_argument("slug", nargs="?", help="limit to one idea")
+
+    p_tst = sub.add_parser("tests", help="list experiments and their outcomes")
+    p_tst.add_argument("slug", nargs="?", help="limit to one idea")
 
     args = ap.parse_args()
     root, why = resolve_root(create=(args.cmd == "root" and args.create))
@@ -408,6 +579,21 @@ def main():
         ))
         return 0
 
+    if args.cmd == "assumptions":
+        print(json.dumps(
+            {"ideas": [{"slug": d.name, "assumptions": scan_assumptions(d)} for d in folders]},
+            indent=2,
+        ))
+        return 0
+
+    if args.cmd == "tests":
+        print(json.dumps(
+            {"ideas": [{"slug": d.name, "next_test_id": next_test_id(read_tests(d)),
+                        "tests": read_tests(d)} for d in folders]},
+            indent=2,
+        ))
+        return 0
+
     failed = 0
     for d in folders:
         for name in ARTIFACTS:
@@ -415,6 +601,13 @@ def main():
             if not p.exists():
                 continue
             problems = validate_artifact(p)
+            if problems:
+                failed += 1
+                print(f"{p}:")
+                for msg in problems:
+                    print(f"  - {msg}")
+        for p in sorted((d / "tests").glob("*.md")) if (d / "tests").is_dir() else []:
+            problems = validate_test(p)
             if problems:
                 failed += 1
                 print(f"{p}:")

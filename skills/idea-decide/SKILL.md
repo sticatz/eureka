@@ -35,6 +35,16 @@ Synthesize everything into **go**, **park** or **kill**. Every prior phase exist
    every gap split by resolved and severity, `evidence_cap`, `stale_artifacts`, `go_available` and
    `go_blockers`.
 
+   **Read `tests` too, and read every file in `tests/`.** These are the only claims in the folder
+   that were checked against the world rather than reasoned about, so they outrank everything else
+   in the inventory. For each: the pre-registered threshold, the filtered result, and the outcome.
+   A `falsified` outcome or a test still `running` already appears in `go_blockers`.
+
+   If `tests` is empty, say so plainly in Step 1 and carry it into the case against: the entire
+   analysis is reasoning about what the user believed at the outset, and nothing in it has been
+   checked. That is not disqualifying — at low `stakes` it can be perfectly rational — but it is
+   the single most important fact about the evidence base and it must not be buried.
+
    If `stale_artifacts` is non-empty, say so before anything else. Synthesizing a confident verdict
    across artifacts that describe two different versions of the idea is the worst failure available
    here.

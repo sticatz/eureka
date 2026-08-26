@@ -19,7 +19,7 @@ ok()   { printf '  \033[32mok\033[0m   %s\n' "$1"; PASS=$((PASS+1)); }
 bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$1"; [ $# -gt 1 ] && printf '       %s\n' "$2"; FAIL=$((FAIL+1)); }
 head_() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
-SKILLS=(idea-start idea-concept idea-validate idea-gtm idea-feasibility idea-mvp idea-decide idea-recap)
+SKILLS=(idea-start idea-concept idea-validate idea-gtm idea-feasibility idea-mvp idea-decide idea-recap idea-test)
 
 # --------------------------------------------------------------------------
 head_ "Manifests"
@@ -195,6 +195,24 @@ grep -q 'idea-red-team' skills/idea-decide/SKILL.md \
   && ok "idea-decide dispatches the red team" \
   || bad "idea-decide does not dispatch the red team"
 
+# A test result nothing reads is the original sin repeated. Every consumer of
+# test state must actually consume it.
+for s in idea-decide idea-recap idea-start; do
+  grep -q 'tests' "skills/$s/SKILL.md" \
+    && ok "$s reads test state" \
+    || bad "$s does not read test state (results would be write-only)"
+done
+
+grep -q 'idea-red-team' skills/idea-decide/SKILL.md && grep -q "tests/" agents/idea-red-team.md \
+  && ok "the red team reads tests/" \
+  || bad "the red team does not read tests/"
+
+for r in interviewing research; do
+  grep -q "references/$r.md" skills/idea-test/SKILL.md \
+    && ok "idea-test loads the $r reference" \
+    || bad "idea-test does not load $r.md"
+done
+
 # --------------------------------------------------------------------------
 head_ "Skill size"
 
@@ -213,6 +231,25 @@ for fx in evals/fixtures/*/; do
   out=$(cd "$fx" && python3 "$ROOT/scripts/eureka.py" validate 2>&1)
   if [ $? -eq 0 ]; then ok "fixture $name validates"; else bad "fixture $name fails validation" "$out"; fi
 done
+
+# falsified-test: a checked-and-false assumption must outweigh five healthy phases.
+if [ -d evals/fixtures/falsified-test ]; then
+  st=$(mktemp)
+  ( cd evals/fixtures/falsified-test && python3 "$ROOT/scripts/eureka.py" status ) > "$st"
+  if python3 "$ROOT/evals/assert_falsified_test.py" "$st" 2>/tmp/eureka_assert_err; then
+    ok "a falsified test withholds \`go\` despite five strong phases"
+  else
+    bad "falsified-test fixture assertions failed" "$(cat /tmp/eureka_assert_err)"
+  fi
+  rm -f "$st"
+fi
+
+# Pre-registration integrity: a result may not predate its own threshold.
+if python3 "$ROOT/evals/assert_test_preregistration.py" "$ROOT/scripts/eureka.py" 2>/tmp/eureka_assert_err; then
+  ok "validator rejects a result written before/without its kill threshold"
+else
+  bad "pre-registration guard failed" "$(cat /tmp/eureka_assert_err)"
+fi
 
 # weak-evidence: two load-bearing phases at weak evidence must withhold `go`.
 # This is the fix for evidence_strength being computed and then ignored.

@@ -20,10 +20,12 @@ exist.
 ## Inputs
 
 The dispatching skill provides the absolute path to one idea folder. Read every artifact present:
-CONCEPT.md, VALIDATION.md, GTM.md, FEASIBILITY.md, MVP.md, and DECISION.md if it exists.
+CONCEPT.md, VALIDATION.md, GTM.md, FEASIBILITY.md, MVP.md, and DECISION.md if it exists. Read every
+file in `tests/`.
 
 Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/eureka.py" status <slug>` for the computed state —
-gap counts, evidence caps, overrides, stale artifacts, `go_blockers`. Do not recompute these.
+gap counts, evidence caps, overrides, stale artifacts, `go_blockers`, `tests`. Do not recompute
+these.
 
 ## Method
 
@@ -34,6 +36,14 @@ How much of the case rests on `**Assumption:**` markers? Check `## Sources` — 
 claims actually sourced, with retrievable URLs and dates, or asserted? Flag any claim that reads as
 established fact but has no source behind it. Flag proxy evidence used to support a specific angle
 rather than the category.
+
+**1b. Audit the tests.** If `tests/` is empty, that is the headline finding: nothing in this folder
+has been checked against the world, and every conclusion is reasoning over the founder's own
+starting beliefs. If tests exist, attack them individually. Was the kill threshold set before the
+run, or does the file show a result written against a threshold that could not fail? Was the sample
+big enough to discriminate? Did the tested claim actually bear on the load-bearing assumption, or
+on a comfortable one nearby? A `supported` outcome on a soft threshold is weaker than no test, because
+it launders a guess into the evidence column.
 
 **2. Attack the load-bearing claim.** Every idea has one claim that, if false, takes the whole
 thing down. Find it. State it in one sentence. Then state what evidence would be required to

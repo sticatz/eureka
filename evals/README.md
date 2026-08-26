@@ -24,7 +24,7 @@ Every one of those is mechanically checkable, and every one is now checked.
 | Manifests | Valid JSON; `source: "./"`; required fields on both manifests; `claude plugin validate --strict` when the CLI is present. |
 | Skill frontmatter | `name` matches the directory; `description` and `allowed-tools` present; read-only skills carry no write tools; the router is user-invoked only. |
 | Path resolution | No bare relative references to plugin files; every skill uses `${CLAUDE_PLUGIN_ROOT}`; every referenced path resolves to a file that exists. |
-| Protocol consistency | No pointers to removed files; one verdict vocabulary; overrides documented as a list; no `AskUserQuestion`-for-everything mandate; every skill loads the references it needs; decide dispatches the red team. |
+| Protocol consistency | No pointers to removed files; one verdict vocabulary; overrides documented as a list; no `AskUserQuestion`-for-everything mandate; every skill loads the references it needs; decide dispatches the red team; every consumer of test state actually reads it. |
 | Skill size | Each `SKILL.md` under the 3,000-word guideline. |
 | Fixtures | Every fixture passes `eureka.py validate`, plus behavioral assertions. |
 
@@ -40,6 +40,17 @@ same underlying weakness logged as a gap twice, the second marked `duplicate_of`
 This is the regression test for the deepest v1.0.0 flaw: `evidence_strength` was computed,
 displayed in a table, and then never consulted by any decision rule, so five weak phases could
 still produce a confident `go`.
+
+**`falsified-test`** — the inverse. Every phase is `complete`, `proceed` and `strong`, with no gaps
+and nothing stale, but the one assumption that was actually checked came back below its
+pre-registered kill threshold. Asserts `go_available` is false anyway. If a healthy-looking pipeline
+can outvote the only claim that met reality, test results are decoration.
+
+**Pre-registration integrity** (`assert_test_preregistration.py`, no fixture directory) — builds
+throwaway test files and asserts the validator rejects two specific shapes: an `outcome` set while
+`status` is still `designed`, and an `outcome` recorded against an empty `kill_threshold`. A
+threshold written once the answer is known is not a threshold, and this is the one place hindsight
+can be blocked mechanically rather than asked for politely.
 
 ## Adding a fixture
 

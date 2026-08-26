@@ -53,6 +53,8 @@ Fill every column from `status` output. **Flags** surfaces, in this order of pro
 - `⚠ N significant gaps` with the evidence cap when `evidence_cap` is set.
 - `killer (overridden)` or `killer` per phase verdicts.
 - `override ×N` when overrides exist.
+- `test T00N running` for an experiment awaiting debrief, and `⚠ falsified` for any test that came
+  back against its threshold.
 - For a decided idea with `verdict: park`, show the `revisit_trigger` verbatim. A park is a
   decision to come back — an idea whose trigger is never surfaced again is just a slow kill.
 
@@ -73,9 +75,14 @@ Read that idea's entry and route on `next_phase`:
 | State | Route to |
 |-------|----------|
 | No folder, or a new idea | `/eureka:idea-concept` |
+| A test is `designed` or `running` | `/eureka:idea-test` to debrief it |
 | `current_phase` is in-progress | that phase's skill, to continue |
 | `next_phase` set | `/eureka:idea-<next_phase>` |
 | `decide_ready` and DECISION.md complete | `/eureka:idea-recap` |
+
+`/eureka:idea-test` is available at any point and is not part of the sequence. Offer it whenever
+`go_blockers` names weak evidence, or when `open_assumptions` is long — it is the only skill that
+turns an assumption into a fact.
 
 Before routing, surface anything that changes what the user is walking into:
 
@@ -97,6 +104,9 @@ For a user new to Eureka, before routing:
 > **idea-feasibility** — Can you build, run, afford, and legally operate this?
 > **idea-mvp** — What's the smallest concrete thing that tests the core hypothesis?
 > **idea-decide** — Go, park, or kill, with full reasoning.
+>
+> **idea-test** — runs alongside all of it: pick an assumption, design the cheapest experiment
+> that could prove you wrong, then record what came back.
 >
 > Two things to expect. These skills default to devil's advocate: they refuse vague answers, demand
 > evidence, and push back on lazy reasoning. And evidence is load-bearing — if the analysis rests

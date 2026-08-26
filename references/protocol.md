@@ -34,14 +34,21 @@ ask for confirmation. Suggest `git init` in that workspace and a commit at each 
 artifacts are the only durable state, they are rewritten in place many times per session, and
 there is no undo.
 
-Each idea is a folder of uppercase artifacts:
+Each idea is a folder of uppercase artifacts, plus a `tests/` directory:
 
 ```
 <ideas-root>/<idea-slug>/
   CONCEPT.md  VALIDATION.md  GTM.md  FEASIBILITY.md  MVP.md  DECISION.md  SUMMARY.md
+  tests/
+    T001-invoice-pain-interviews.md
+    T002-landing-page-smoke.md
 ```
 
 `<idea-slug>` is lowercase-kebab-case derived from the idea name.
+
+The six artifacts hold analysis. `tests/` holds **results** — the only place in the system where a
+claim about the world gets checked against the world. Everything else is reasoning about what the
+user already believed.
 
 ## Frontmatter schema
 
@@ -107,6 +114,36 @@ single weakness cannot be penalized three times.
 Logging a gap is cheap and honest. Minor gaps never trigger a cap. There is no cheaper alternative
 route for recording a finding about earlier work, and no judgment call about whether something is
 "trivial enough" to slip in quietly.
+
+### Test files
+
+One file per experiment in `tests/`, named `<id>-<short-slug>.md`. Written and debriefed by
+`idea-test`.
+
+```yaml
+---
+id: T001
+status: designed | running | complete | abandoned
+method: desk-research | interviews | smoke-test | pre-sale | concierge | wizard-of-oz | built-mvp
+assumption: "<the claim being tested, quoted from the artifact it came from>"
+source_artifact: VALIDATION.md
+cost: "<money and days>"
+prediction: "<what you expect to see if the assumption holds>"
+kill_threshold: "<the result that falsifies it>"
+created: YYYY-MM-DD
+launched: null
+closed: null
+outcome: null | supported | falsified | inconclusive
+---
+```
+
+`prediction` and `kill_threshold` are **required from the moment the test is designed**, and
+`eureka.py validate` rejects a file where `outcome` is set while `status` is still `designed`. A
+threshold written once the result is known is not a threshold. This is the one place the system can
+mechanically prevent hindsight, and it does.
+
+An `outcome: falsified` on any test, or any test left `running`, appears in `go_blockers` — a test
+result is the strongest evidence the system holds, so it moves the verdict in both directions.
 
 ### Override entries
 
@@ -196,7 +233,28 @@ entries. There is no "trivial addition" side channel: a competitor discovered du
 exactly the kind of finding that could flip validate's verdict, and a route that records it without
 a gap entry is a route that hides it from decide.
 
-The single exception is Gate B′ above.
+The exceptions are Gate B′ above and Gate E below.
+
+## Gate E — recording a test result
+
+A test that comes back and changes nothing is a write-only artifact, and a system that demands
+evidence but cannot receive it is the failure this gate exists to prevent. So `idea-test`, and only
+`idea-test`, may write the result of a completed experiment back into the artifact the tested claim
+came from:
+
+- On `outcome: supported` — move the claim out of the assumption list in
+  `## Evidence vs Assumptions` and into the evidenced list, citing the test id. Add the test to
+  `## Sources` with its close date.
+- On `outcome: falsified` — leave the claim where it is, mark it
+  `**Falsified by T00N:** <claim>`, and add a `key_risks` tag.
+- On `outcome: inconclusive` — leave the claim as an assumption and note the test id beside it.
+
+Then bump the artifact's `updated` date, and tell the user that `evidence_strength` for that phase
+may now be wrong and the phase can be rerun to regrade it.
+
+Nothing else in the artifact may be touched: not the prose, not the verdict, not
+`evidence_strength`. The skill records what happened; regrading the phase is the phase's job, with
+the user in the room.
 
 ## Verdict eligibility
 
