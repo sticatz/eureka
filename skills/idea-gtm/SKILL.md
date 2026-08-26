@@ -1,124 +1,160 @@
 ---
 name: idea-gtm
-description: Use when an idea has been through concept and validation and the user wants to explore go-to-market strategy — how customers find this, channel selection, cold start, acquisition costs, positioning, and moat. Trigger on "how do we reach customers?", "go-to-market", "distribution", "cold start", or when moving from validation to GTM. Requires CONCEPT.md and VALIDATION.md. Do NOT use for problem validation (idea-validate) or feasibility (idea-feasibility).
-argument-hint: [idea-name]
+description: This skill should be used when a business idea has Eureka's CONCEPT.md and VALIDATION.md complete and the user wants to work out distribution and the revenue model — how customers find it, channel selection, cold start, acquisition cost, what to charge, positioning and moat. Triggered by "how do we reach customers?", "go-to-market for this idea", "what should we charge?", or an explicit /eureka:idea-gtm. Writes GTM.md. Not for problem validation (idea-validate) or build feasibility (idea-feasibility).
+argument-hint: "[idea-name]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch, WebFetch, AskUserQuestion
 ---
 
-# Idea GTM — Phase 3
+# Idea GTM — phase 3
 
-How does this idea reach its customers? The best product with no path to users is a dead product. This phase pressure-tests distribution, forces channel specificity, and builds positioning against the alternatives landscape from validation.
+How does this reach customers, and what does it charge them? The best product with no path to
+users is a dead product, and a product with users but no revenue model is a hobby.
 
-## On Start
+This phase owns **both** distribution and monetization. Nothing downstream picks up pricing if it
+is deflected here.
 
-1. Read `CONVENTIONS.md` for shared protocols.
-2. If `$ARGUMENTS` is provided, use it as the idea slug. Otherwise ask: "Which idea?"
-3. Set the working directory to `ideas/<idea-slug>/`.
-4. **Gate check:**
-   - Read `CONCEPT.md` and `VALIDATION.md`. Both must exist with `status: complete`.
-   - If either is missing: "GTM needs a validated concept. Missing: [list]. Run the earlier phase first."
-   - If either has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
-5. Check if `GTM.md` exists — if so, pick up where things left off.
-6. Read both priors to ground the conversation — you need the target user, their problem, and the alternatives landscape.
-7. **Gap resolution scan (rerun only):** If `GTM.md` already exists, run Protocol B' per `CONVENTIONS.md` — scan `FEASIBILITY.md`, `MVP.md` for `gaps` entries where `phase: gtm` and `resolved: false`, surface them, flip `resolved` on confirmed resolution.
+## On start
 
-## How to Explore
+1. Load the shared rules:
 
-**Use `AskUserQuestion` to drive the conversation.** Follow whatever thread the user's answer opens. The areas below are ground to cover, not a checklist to march through.
+   ```bash
+   cat "${CLAUDE_PLUGIN_ROOT}/references/protocol.md"
+   cat "${CLAUDE_PLUGIN_ROOT}/references/dialogue.md"
+   ```
 
-### Where are the users?
-Start from the target user in CONCEPT.md and the segments in VALIDATION.md, then go deeper:
-- Where do these people already spend time? (Communities, platforms, events, publications, tools)
-- How do they currently discover solutions? (Search, referrals, communities, sales outreach)
-- What's their buying process? (Impulse, research-heavy, committee/approval, trial-first)
-- Are there gatekeepers, influencers, or aggregators that reach them?
+   If either cannot be read, stop — Eureka is misinstalled.
 
-Demand specificity. "Small business owners" is not actionable. "Restaurant owners who search Yelp alternatives on Reddit and follow food-industry newsletters" is.
+2. Resolve the idea folder with `eureka.py root`; slug from `$ARGUMENTS` or ask. Print the path.
+
+3. **Gate check.** Run `eureka.py status <slug>`. CONCEPT.md and VALIDATION.md must both be
+   `complete`. If either is missing, name which. If either carries `verdict: killer`, apply Gate A
+   — checking `overrides` first so an already-overridden killer is carried forward, not
+   re-litigated. Surface any `stale_artifacts`.
+
+4. Read both priors: the target user and `why you` from CONCEPT.md, the segments, pain severity,
+   alternatives landscape and any willingness-to-pay signal from VALIDATION.md.
+
+5. **Gap scan (rerun only).** Collect gaps where `phase: gtm` and `resolved: false`, surface per
+   Gate B′.
+
+## How to explore
+
+Ask in prose. Follow the thread the user's answer opens.
+
+### Where the users are
+Start from the validated segments, then go concrete:
+- Where do these people already spend attention — communities, platforms, events, publications,
+  tools?
+- How do they currently discover solutions — search, referral, community, outbound?
+- What is the buying process — impulse, research-heavy, committee approval, trial-first?
+- Are there gatekeepers, aggregators or influencers who already reach them?
+
+Demand specificity. "Small business owners" is not actionable. "Restaurant owners who search Yelp
+alternatives on Reddit and read two food-industry newsletters" is.
+
+Check CONCEPT.md's `why you`. An unfair distribution advantage — an existing audience, a community
+already run, an employer's customer relationships — is frequently the entire realistic channel
+answer, and it is already recorded.
+
+### The revenue model
+This is not a deflection to a later phase. Nothing downstream asks it.
+
+- **What do you charge, to whom, per what unit?** Subscription, transaction fee, one-off, usage,
+  retainer, ad-supported, marketplace take rate.
+- **Who actually pays** — is the payer the user? In B2B they usually are not.
+- **Why that number?** Anchored against what — the substitute's cost, the hours saved, the
+  incumbent's price, the budget line it comes out of? "It feels about right" is not an anchor.
+- **What is the evidence?** Has anyone said they would pay it, or paid for something adjacent?
+  Willingness-to-pay stated in the abstract is close to worthless — see `interviewing.md` on why.
+- **Rough LTV** — price × expected retention × margin. Order of magnitude is enough, but it must
+  exist, because the next section compares CAC against it and a comparison against nothing is not
+  a comparison.
+- **Time to first dollar** — how long from start to the first real payment?
+
+If the user has no revenue model at all, that is a finding, not a gap to skip. Record it as a
+`key_risk` and say plainly that it will weigh at decide.
 
 ### Channel strategy
-Given who they are and where they are, which channels fit? Not which channels exist — which ones actually reach *this* audience for *this* product.
+Which channels reach *this* audience for *this* product — not which channels exist. For each
+viable one: why it fits, the strategy-level approach, and rough CAC. Tie it to the LTV established
+above: "if LTV is $200 and clicks cost $15–30 at 2% conversion, CAC is $750–1500 — that doesn't
+work."
 
-For each viable channel, cover:
-- **Why this channel** — what makes it a fit for this audience and product?
-- **Approach** — strategy-level, not a setup guide. "Run targeted LinkedIn ads to CFOs at mid-market companies" not "how to create a LinkedIn campaign."
-- **Cost signals** — rough CAC. Tie back to the idea's likely economics. "If LTV is $200 and LinkedIn ads cost $15-30/click with 2% conversion, CAC is $750-1500 — that doesn't work."
+Do not suggest channels because they exist. If the target user is not on Instagram, say so.
 
-Don't suggest channels just because they exist. If the target user isn't on Instagram, say so.
-
-### Cold start and chicken-egg
-Matters most for marketplaces, platforms, and network-effect businesses. But probe whether it applies even for simpler products.
-- Which side of the market first? Why?
-- What's the minimum supply/demand to be useful?
-- Can you start manual/concierge? (Things that don't scale to bootstrap the first cohort.)
-- Single-player mode — is the product useful even without network effects?
-- Existing communities or aggregations to tap into?
+### Cold start
+Matters most for marketplaces and network-effect businesses; probe whether it applies regardless.
+Which side first and why; minimum viable supply or demand; whether it can start manual or
+concierge; whether there is a single-player mode; existing aggregations to tap.
 
 ### Positioning
-Using VALIDATION.md's alternatives landscape:
-- Against the direct competitors: what's the positioning? (Not "we're better" — better how, for whom, in what context?)
-- Against substitutes (spreadsheets, manual processes): what makes switching worth the effort?
-- Against inaction: what triggers someone to finally solve this problem?
+Against direct competitors: better how, for whom, in what context? Against substitutes: what makes
+switching worth the effort? Against inaction: what event finally makes someone act?
 
-### Competitive landscape in channels
-Where are competitors strong in distribution, and where are the gaps?
-- If competitors dominate SEO for your keywords, what's the alternative?
-- Are there underserved channels where your positioning gives you an edge?
-- Can you differentiate on distribution, not just product? (e.g., a community-first approach in a space where competitors only do paid ads)
-- Which channels are *winnable* given who else is already competing for attention there?
+### Channel competition
+Where are competitors strong in distribution, and where are the gaps? If they own SEO for the
+obvious keywords, what is the alternative? Which channels are actually *winnable* given who is
+already buying attention there? Can distribution itself be the differentiator?
 
-### Go-to-market sequence
-Not just "which channels" but "in what order and why":
-- **Phase 0 — Validation:** Before spending money. Landing pages, waitlists, manual outreach, small ad tests.
-- **Phase 1 — First users:** Scrappy, unscalable things for the first 10-100 users.
-- **Phase 2 — Growth:** Investment in scalable channels once you have PMF signals.
-- What signals tell you to move from one phase to the next?
+### Sequence
+Not just which channels, but in what order and on what signal:
+- **Phase 0 — validation:** landing pages, waitlists, manual outreach, small paid tests. Before
+  real money.
+- **Phase 1 — first users:** unscalable things for the first 10–100.
+- **Phase 2 — growth:** scalable channels once there is a PMF signal.
 
-### Cost reality
-- Estimated CAC per channel.
-- Does CAC fit within plausible LTV? (Reference VALIDATION.md's willingness-to-pay signals if any.)
-- Minimum budget to test each channel meaningfully.
-- Time-to-results per channel. (SEO = months, paid = days.)
+What signal moves it from one phase to the next?
 
-If marketing costs make unit economics negative, surface this as a critical tension.
+### Research
+Before recording CAC, market size or channel economics as unknown, load and follow:
 
-## Handling Depth Gaps
+```bash
+cat "${CLAUDE_PLUGIN_ROOT}/references/research.md"
+```
 
-When GTM work reveals weaknesses in **earlier phase thinking** — e.g., a target user that collapses under distribution pressure, or a validation claim that doesn't survive channel analysis — log a `gaps` entry per `CONVENTIONS.md` Protocol B and continue. Advisory, not blocking.
+Published CAC benchmarks by channel and industry, ad platform rate cards, keyword difficulty,
+community sizes and posting rules, competitor pricing pages. A CAC recorded as "unknown" when a
+benchmark exists is an avoidable weak-evidence score.
 
-Gaps may point to **any** earlier phase. A GTM finding that invalidates the concept-level target user is a `concept` gap, not a `validate` one. Record it against the phase where the thinking lives. Multiple gaps in different phases can be logged on the same artifact.
+If unit economics come out negative, surface it immediately as a tension — do not bury it in a
+cost table.
 
-## Red Flags
+## Depth gaps
 
-When you hear any of these, respond with the pushback directly in prose. Do not accept the answer and continue.
+Gaps may point at **any** earlier phase. A GTM finding that invalidates the concept-level target
+user is a `concept` gap, not a `validate` one — record it against the phase where the thinking
+lives. Check for duplicates and set `duplicate_of` when the weakness is already logged.
 
-| User says | Skill responds |
+## Red flags
+
+| User says | Respond |
 |---|---|
-| "We'll go viral" | "Virality is an outcome, not a strategy. What specific mechanic would cause one user to bring in others?" |
+| "We'll go viral" | "Virality is an outcome, not a strategy. What specific mechanic makes one user bring in another?" |
 | "Word of mouth" | "Word of mouth is what happens when everything else works. What gets you the first users who do the talking?" |
-| "Content marketing" | "Content marketing for whom, about what, distributed where? 'We'll write blog posts' is not a strategy." |
-| "We'll just do SEO" | "For which keywords? Who ranks there now? What's your realistic timeline to page 1 against established players?" |
-| "Build it and they'll come" | "Nobody comes. You go get them. Through which specific channel, at what cost?" |
-| "We'll partner with X" | "Have you talked to X? What's in it for them? Partnerships require leverage — what's yours?" |
-| "We don't have competitors" | "VALIDATION.md mapped alternatives. People doing nothing is your competitor. Why would they change?" |
-| "We'll post on TikTok/Instagram" | "What evidence do you have that your target user discovers apps through these channels? Show me an example of a similar product that grew this way." |
-| "Organic social is free" | "Organic social costs your time and has zero guaranteed reach. What's your plan when 20 posts get 50 views each?" |
-| User can't answer a question | Don't fill in guesses. Note it as an open question and move on. A gap in distribution knowledge is a key risk for decide. |
+| "Content marketing" | "For whom, about what, distributed where? 'We'll write blog posts' is not a strategy." |
+| "We'll just do SEO" | "Which keywords? Who ranks there now? What's the realistic timeline to page one against them?" |
+| "Build it and they'll come" | "Nobody comes. You go get them. Through which channel, at what cost?" |
+| "We'll partner with X" | "Have you talked to X? What's in it for them? Partnerships need leverage — what's yours?" |
+| "We'll post on TikTok" | "What evidence is there that your target user discovers products this way? Name a similar product that grew like that." |
+| "Organic social is free" | "It costs your time and guarantees zero reach. What's the plan when twenty posts get fifty views each?" |
+| "We'll figure out pricing later" | "Later is decide, and decide can't green-light a business with no revenue model. What's the unit, and what anchors the number?" |
+| "We'll be cheaper than X" | "Cheaper is a position competitors with more capital can take from you at will. Why is cheap defensible here?" |
+| "We'll monetize once we have users" | "That's two bets stacked. Which users, paying for what, and what makes you think the free cohort converts?" |
 
-## Boundary Enforcement
-
-**Never cross these boundaries.** Redirect every time, no exceptions.
+## Staying in scope
 
 | Drift toward | Response |
 |---|---|
-| Product features, tech stack | "We're on distribution right now. Features come from feasibility + MVP. How do users find this?" |
-| Revisiting problem validation | "The problem's mapped in VALIDATION.md. If you want to revise, rerun `/eureka:idea-validate`. Here we're focused on reaching the people who have it." |
-| Pricing deep-dive | "Pricing matters for CAC/LTV math, but full pricing analysis is feasibility territory. Keep it rough here." |
-| Verdict | "Not yet — feasibility and MVP still need to happen before decide." |
+| Product features, tech stack | "Distribution first — features come from feasibility and MVP. How do users find this?" |
+| Revisiting problem validation | "That's VALIDATION.md. If it needs revising, rerun `/eureka:idea-validate` — I'll log a gap. Here we're reaching the people who have it." |
+| Detailed cost modeling | "Rough numbers are enough here — feasibility does the full cost structure. I need the shape, not the spreadsheet." |
+| Verdict | "Not yet — feasibility and MVP still have to happen." |
 
-## Phase Transition
+## Phase transition
 
-When channels, positioning, costs, and sequence are explored:
-
-> "Here's the GTM picture: [summary — best channels, cold-start approach, CAC reality, positioning, channel competition]. When you're ready, `/eureka:idea-feasibility` will evaluate whether we can build, run, afford, and legally operate this at the scale GTM implies. Want to dig deeper, or move on?"
+> "Here's the GTM picture: [channels, cold start, CAC vs LTV, pricing, positioning]. When you're
+> ready, `/eureka:idea-feasibility` evaluates whether you can build, run, afford and legally
+> operate this at the scale this implies. Want to dig deeper, or move on?"
 
 **Never auto-transition.**
 
@@ -131,47 +167,43 @@ status: in-progress
 verdict: null
 evidence_strength: null
 key_risks: []
-overridden: false
-override_reason: null
+created: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+covered: []
+pending: []
+last_question: null
+overrides: []
 gaps: []
 ---
 ````
 
 ````markdown
-# <Idea Name> — Go-to-Market Strategy
+# <Idea Name> — Go-to-Market
 
 ## Where the Users Are
-[Platforms, communities, events, publications — specific to target user from CONCEPT.md]
-
+## Revenue Model
 ## Channel Strategy
-[Per viable channel: why it fits, approach, cost signals]
-
 ## Cold Start Plan
-[If applicable: which side first, minimum viable supply/demand, concierge approach]
-
 ## Positioning
-[Against alternatives from VALIDATION.md — how, for whom, in what context]
-
-## Competitive Landscape in Channels
-[Where competitors are strong in distribution, where gaps exist, which channels are winnable]
-
+## Channel Competition
 ## Go-to-Market Sequence
-[Phase 0: validation → Phase 1: first users → Phase 2: growth. Transition signals.]
-
-## Cost Reality
-[CAC per channel, fit with LTV, budget to test, time-to-results]
-
+## Unit Economics
 ## Key Tensions
-[Where distribution conflicts with other dimensions]
+## Evidence vs Assumptions
+## Sources
 ````
 
-Adapt to what emerged.
+`## Evidence vs Assumptions` and `## Sources` are required. `## Unit Economics` must show the
+actual arithmetic — price, retention, margin, LTV, CAC per channel — or state explicitly which
+input is missing and why.
 
 **On completion:**
-- `verdict: proceed` — at least one channel is specific and plausibly cost-viable with positioning.
-- `verdict: proceed-with-caution` — channels exist but cold-start is unresolved or CAC is uncertain.
-- `verdict: killer` — CAC can't fit any plausible LTV, or no viable channel identified.
-- `evidence_strength` based on how much channel/cost analysis rests on data vs guesses.
-- `key_risks` from cold start, channel competition, cost uncertainties.
-
-**Save after each significant exchange.**
+- `verdict: proceed` — at least one specific channel is plausibly cost-viable against a stated
+  price, with positioning that holds.
+- `verdict: proceed-with-caution` — channels exist but cold start is unresolved, CAC is uncertain,
+  or the price has no anchor.
+- `verdict: killer` — no viable channel identified, or CAC cannot fit any plausible LTV, or there
+  is no revenue model and no path to one.
+- `evidence_strength` — how much of the channel, cost and pricing analysis rests on looked-up data
+  versus guesses. Load-bearing: `weak` here removes `go` from the table at decide.
+- `key_risks` — cold start, channel competition, pricing, cost uncertainty.

@@ -1,108 +1,164 @@
 ---
 name: idea-concept
-description: Use when the user wants to capture, explore, or refine a new business/product idea. Trigger on "I have an idea for...", "what if we built...", "is this problem worth solving?", or any early-stage idea exploration. Do NOT use for problem validation (idea-validate) or final verdicts (idea-decide).
-argument-hint: [idea-name]
+description: This skill should be used when the user wants to capture or sharpen a new business, product, or startup idea using Eureka — triggered by "I have an idea for a business", "I want to think through this startup idea", "help me sharpen this product idea", or an explicit /eureka:idea-concept. Writes CONCEPT.md into the user's ideas folder. Not for problem validation (idea-validate) or verdicts (idea-decide).
+argument-hint: "[idea-name]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 
-# Idea Concept — Phase 1
+# Idea Concept — phase 1
 
-Capture and refine an idea until the problem, target user, why-now, and differentiation are sharp enough to evaluate.
+Capture the raw idea, then sharpen it until the problem, user, timing, differentiation and
+founder fit are concrete enough to evaluate.
 
-## On Start
+## On start
 
-1. Read `CONVENTIONS.md` for shared protocols (frontmatter schema, tone contract, gating rules).
-2. If `$ARGUMENTS` is provided, use it as the idea slug. Otherwise ask: "What should we call this idea? (short name — becomes the folder name, e.g., `ai-tax-prep`)"
-3. Set the working directory to `ideas/<idea-slug>/`.
-4. Check if `CONCEPT.md` exists:
-   - **Exists:** Read it. If `status: in-progress`, pick up where things left off. Do NOT start over. If `status: complete`, tell the user and suggest the next phase.
-   - **Does not exist:** Create the directory if needed. Start fresh with Pass 1.
+1. Load the shared protocol and dialogue rules:
 
-## Pass 1 — Free Dump
+   ```bash
+   cat "${CLAUDE_PLUGIN_ROOT}/references/protocol.md"
+   cat "${CLAUDE_PLUGIN_ROOT}/references/dialogue.md"
+   ```
 
-Let the user talk. Use `AskUserQuestion` to draw out the full picture without judgment or structure:
+   If either cannot be read, stop and tell the user Eureka looks misinstalled. Do not proceed
+   without them.
 
-- "Tell me the idea. Don't filter — just dump everything you're thinking."
-- "What triggered this? Did you see something, experience something, hear about something?"
-- "Who do you imagine using this?"
+2. Resolve the idea folder:
 
-Ask one question at a time. Do NOT challenge anything yet. Do NOT organize into sections. The goal is to get the unfiltered thought out of the user's head.
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/eureka.py" root
+   ```
 
-### When to transition to Pass 2
+   Take the slug from `$ARGUMENTS` if given, otherwise ask what to call the idea (short name,
+   becomes the folder name, e.g. `ai-tax-prep`). Artifacts go in `<root>/<slug>/`. **Print that
+   absolute path** and, if the folder is about to be created, confirm it is the right workspace.
 
-Move to Pass 2 when any of these happen:
-- **Explicit signal:** The user says they're done ("that's it", "that's the idea", "I think that covers it").
-- **Coverage signal:** The user has touched at least 2 of the 4 dimensions (problem, user, why-now, differentiation) even loosely — there's enough raw material to start sharpening. Pass 2 fills the gaps; Pass 1 doesn't need to be exhaustive.
-- **Repetition signal:** The user is circling back to things they already said.
+3. Check for an existing `CONCEPT.md`:
+   - **Exists, `status: in-progress`** — read `covered`, `pending` and `last_question` from
+     frontmatter, tell the user what is still open, and resume at `last_question`. Do not start
+     over, and do not infer coverage from the presence of prose.
+   - **Exists, `status: complete`** — this is a rerun. Run the gap scan below, then ask what they
+     want to revisit.
+   - **Missing** — start at Pass 1.
 
-Err toward moving forward. A lingering dump phase ("anything else?") is worse than transitioning with gaps — that's what Pass 2 is for.
+4. **Gap scan (rerun only).** Run `eureka.py status <slug>` and collect every gap across all
+   artifacts where `phase: concept` and `resolved: false`. Surface them per Gate B′ and ask which
+   to address. Concept is the most common gap target — every later phase pressure-tests it — so
+   this is the most-used path through the gap system, not an edge case.
 
-Transition line: "OK, I've got the raw dump. Now let me push on it."
+## Pass 1 — free dump
 
-## Pass 2 — Sharpen
+Let the user talk. Open with a plain prose invitation:
 
-Reflect back what you heard, then use `AskUserQuestion` to systematically probe four dimensions. Each must be sharp before this phase can complete.
+> "Tell me the idea. Don't filter — dump everything you're thinking, in whatever order it comes."
 
-Ask about whichever dimension the previous answer naturally leads to. Follow the thread — don't march through a checklist.
+Then follow up on what they actually said. "What triggered this — did you see something, hit it
+yourself, hear about it?" "Who do you picture using it?"
 
-Ground to cover (in whatever order fits the conversation):
+**No `AskUserQuestion` here.** At this point there is nothing to build options from except
+invention, and inventing the idea for the user is the one thing this phase must not do. Ask one
+question at a time, in prose. Challenge nothing yet. Organize nothing yet.
 
-### 1. The Problem
-What specific problem does this solve? Not a category ("productivity") but a concrete pain ("freelance designers spend 3 hours/week chasing invoice payments").
+### Moving to Pass 2
 
-### 2. Target User
-Who has this problem? Be specific — not "small businesses" but "solo consultants billing $5k-20k/month who currently track invoices in spreadsheets."
+Move on when any of these happen:
 
-### 3. Why Now
-Why is this the right time? What changed — technology, regulation, market behavior, cultural shift — that makes this solvable or necessary now? If nothing changed, probe whether this is a "nice to have" that's always been ignorable.
+- The user signals they are done ("that's it", "that's the idea").
+- They have touched at least two of the five dimensions below, even loosely.
+- They start circling back to things they already said.
+
+Err toward moving forward — Pass 2 exists to fill the gaps. A lingering "anything else?" is worse
+than transitioning early.
+
+> "OK, I've got the raw dump. Now let me push on it."
+
+## Pass 2 — sharpen
+
+Reflect back what was heard, then probe. Follow whichever dimension the previous answer opens;
+these are ground to cover, not a sequence to march through.
+
+### 1. The problem
+A concrete pain, not a category. Not "productivity" but "freelance designers spend three hours a
+week chasing invoice payments."
+
+### 2. Target user
+Specific. Not "small businesses" but "solo consultants billing $5–20k/month who track invoices in
+spreadsheets."
+
+### 3. Why now
+What changed — technology, regulation, market behavior, cost curve — that makes this solvable or
+necessary now? If nothing changed, probe whether this is a nice-to-have that has always been
+ignorable. No timing insight means a patient market: anyone with more resources can do this
+whenever they like.
 
 ### 4. Differentiation
-What's the insight or angle? Not "we'll be better" but specifically how and why. What do existing alternatives get wrong, and why will this approach win?
+The angle. Not "we'll be better" but what existing alternatives get wrong and why this approach
+wins. A first-pass answer is enough here — `idea-validate` maps the alternatives landscape
+properly and will come back to this.
 
-**Challenge weak answers procedurally.** When a user's answer matches a Red Flag below, respond with the specific pushback via `AskUserQuestion`. Do not accept the answer and move on.
+### 5. Why you
+Why does *this* operator win this? "Why hasn't anyone done this?" has two good answers: something
+just changed (why now), or you have an advantage others don't. Domain access, an existing audience,
+unusual credibility with the buyer, a distribution channel already in hand, having lived the
+problem for years.
 
-**Do NOT force answers.** If the user genuinely can't answer, that's a signal worth noting as an open question — not a blank to fill with guesses. Move to the next thread.
+Take a thin answer seriously — an idea can be genuinely good and genuinely unwinnable by the person
+holding it. And an unfair distribution advantage found here is often the entire realistic answer to
+GTM's "where are the users?", so record it either way.
 
-## Red Flags
+### Also capture, in frontmatter
 
-When you hear any of these, respond with the pushback directly in prose. Do not accept the answer and continue.
+- `stakes` — what it costs to be wrong. A weekend, a quarter, savings, a job. This scales
+  everything downstream: at low stakes, thin evidence plus cheap falsification is a rational bet,
+  and the process should not pretend otherwise.
+- `idea_class` — `software`, `service`, `marketplace`, `physical`, `content`, or `other`. Later
+  phases branch on it. A physical-goods business dies of working capital; an agency dies of
+  utilization and key-person risk; neither is visible through a software-shaped feasibility lens.
 
-| User says | Skill responds |
+## Red flags
+
+Respond with the pushback in prose, then keep probing. These are examples of the register — apply
+the same response to an answer that means the same thing in different words.
+
+| User says | Respond |
 |---|---|
 | "Everyone needs this" | "That's not a user. Pick one person. Describe their day. When does this problem hit them?" |
-| "It's like X but better" | "Better how? What does X get wrong, and why hasn't X (or anyone else) fixed it?" |
-| "The market is huge" | "How huge? Which segment are you actually going after first? 'Huge market' has killed more startups than small markets." |
-| "There's no competition" | "There's always competition — even if it's spreadsheets, manual processes, or doing nothing. What do people do today instead?" |
-| "We just need to build it and they'll come" | "That's a distribution assumption, not a plan. But we'll get to distribution later — right now, is the problem worth solving?" |
-| "It's obvious why this is needed" | "If it's obvious, make it concrete. State the problem in one sentence with a specific user." |
-| "Culture is shifting" / "Society is changing" | "Which culture, shifting how, and what's the evidence? A vague trend isn't a timing insight." |
-| "Technology enables it now" | "Which technology? When did it become available? If it's been available for years, why hasn't someone done this already?" |
-| No why-now answer at all | Record as a gap, but explicitly warn: "No timing insight means a patient market — anyone with more resources could do this whenever they want. That's a moat risk." |
-| User can't answer a question | Don't fill in guesses. Note it as an open question in the artifact and move to the next thread. A gap is a signal, not a failure. |
+| "It's like X but better" | "Better how? What does X get wrong, and why hasn't X — or anyone else — fixed it?" |
+| "The market is huge" | "How huge, and which segment are you going after first? Huge markets have killed more startups than small ones." |
+| "There's no competition" | "There's always competition — spreadsheets, manual processes, doing nothing. What do people do today instead?" |
+| "Build it and they'll come" | "That's a distribution assumption, not a plan. We'll pressure-test it in GTM — right now, is the problem worth solving?" |
+| "It's obvious why this is needed" | "Then it should be easy to make concrete. State the problem in one sentence with a specific user." |
+| "Culture is shifting" | "Which culture, shifting how, and what's the evidence? A vague trend isn't a timing insight." |
+| "Technology enables it now" | "Which technology, and when did it become available? If it's been around for years, why hasn't someone done this?" |
+| "I'm the right person because I'm passionate" | "Passion isn't an advantage — everyone building something has it. What do you have that a competent stranger doesn't?" |
+| No why-now answer at all | Record it, and warn: "No timing insight means a patient market. Anyone with more resources could do this whenever they want. That's a moat risk." |
 
-## Boundary Enforcement
+## Staying in scope
 
-**Never cross these boundaries.** If the conversation drifts toward ANY of these, redirect immediately:
+Redirect drift, but record it rather than discarding it — a thought that arrives early is still a
+real thought.
 
 | Drift toward | Response |
 |---|---|
-| Tech stack, architecture, "how would we build this" | "Noted — we'll get to that in feasibility. Right now: is the problem worth solving, and for whom?" |
-| Pricing, revenue, monetization | "Good instinct, but let's solidify who this is for before talking money. That comes in GTM and feasibility." |
-| Verdicts ("should we build this?") | "Too early. Sharpen the concept first — the verdict comes after 5 more phases of thinking." |
-| Distribution, marketing, channels | "We'll pressure-test distribution in GTM. For now: who's the user and what's their problem?" |
+| Tech stack, architecture | "Noted for feasibility — I'll carry it forward. Right now: is the problem worth solving, and for whom?" |
+| Pricing, revenue model | "Good instinct, and GTM will interrogate it properly. Let's solidify who this is for first — I'll note what you said." |
+| Distribution, channels | "GTM territory, noted. For now: who's the user and what's their problem?" |
+| Verdicts | "Too early. Sharpen the concept first — the verdict comes after five more phases." |
 
-This applies even if the user initiates it. Redirect every time, no exceptions.
+When a redirected thought is substantive, record it under `## Carried Forward` so the later phase
+inherits it. A hard blocker discovered here — "the API this depends on was shut down" — is not
+drift. Record it as a `key_risks` entry and tell the user it will be decisive at feasibility.
 
-## Phase Transition
+## Phase transition
 
-When all four dimensions (problem, user, why-now, differentiation) are sharp — or the user has explicitly acknowledged gaps:
+When the dimensions are sharp, or the user has explicitly acknowledged the gaps:
 
-> "The concept is taking shape. Here's where we landed: [brief summary of the four dimensions]. When you're ready, `/eureka:idea-validate` will interrogate whether this problem is real and map who else is solving it. Want to keep refining, or move on?"
+> "The concept is taking shape. Here's where we landed: [brief summary]. When you're ready,
+> `/eureka:idea-validate` will interrogate whether this problem is real and map who else is solving
+> it. Want to keep refining, or move on?"
 
-**Never auto-transition.** Always wait for the user's go-ahead.
+**Never auto-transition.**
 
 ## Writing CONCEPT.md
-
-When writing or updating, use this scaffolding — but adapt sections to what actually emerged:
 
 ````yaml
 ---
@@ -111,40 +167,47 @@ status: in-progress
 verdict: null
 evidence_strength: null
 key_risks: []
-overridden: false
-override_reason: null
+created: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+stakes: <one line — what it costs to be wrong>
+idea_class: software | service | marketplace | physical | content | other
+covered: []
+pending: []
+last_question: null
+overrides: []
 ---
 ````
 
-Note: CONCEPT.md omits the `gaps` field (first phase — no prior work to point at). All downstream phase artifacts include it per CONVENTIONS.md.
+CONCEPT.md carries no `gaps` field — it is the first phase and has nothing earlier to point at.
+It is the target of other phases' gaps, not a source of them.
 
 ````markdown
 # <Idea Name>
 
 ## The Problem
-[Specific problem statement]
-
 ## Target User
-[Who — specific, not generic]
-
 ## Why Now
-[Timing insight — what changed]
-
 ## Differentiation
-[The angle — what existing alternatives get wrong]
-
+## Why You
+## Evidence vs Assumptions
+## Carried Forward
 ## Open Questions
-[Anything unresolved]
 ````
 
-Sections are starting points. Rename, reorder, or add sections to match how the idea actually unfolded.
+Tell the user: *"These sections are starting points — rename, reorder, or add to match how the idea
+actually unfolded."*
 
-**Updating status and verdict on completion:**
+Update `covered`, `pending`, `last_question` and `updated` on every save. Save at natural
+boundaries — a settled dimension, a recorded claim — not after every exchange.
+
+**On completion:**
 - `status: complete`
-- `verdict: proceed` — if problem, user, why-now, and differentiation are all sharp.
-- `verdict: proceed-with-caution` — if one dimension is weak but acknowledged.
-- `verdict: killer` — if two or more dimensions remain vague after sharpening. (Rare at concept stage, but possible.)
-- Set `evidence_strength` based on how many claims are evidenced vs assumed.
-- Set `key_risks` from open questions and weak dimensions.
-
-**Save the file after each significant exchange** — don't wait for the phase to complete. Write what you have, update as the conversation progresses.
+- `verdict: proceed` — the dimensions are sharp.
+- `verdict: proceed-with-caution` — one is weak but acknowledged.
+- `verdict: killer` — two or more remain vague after genuine sharpening. Rare here: concept judges
+  articulation, and a badly articulated idea is not the same as a bad idea. Reserve it for a
+  concept that cannot be stated concretely enough to test.
+- `evidence_strength` — from the ratio in `## Evidence vs Assumptions`. Most first concepts are
+  `weak`, and that is honest, not a failure. Grade the ledger in the file, not the felt quality of
+  the conversation.
+- `key_risks` — from open questions and weak dimensions.

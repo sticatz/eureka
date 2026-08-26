@@ -1,5 +1,14 @@
 # Eureka
 
+> **Superseded.** This is the original design document, kept for provenance. It does not describe
+> current behaviour and must not be used as a specification. Two things in particular have changed:
+> the terminal verdicts are `go` / `park` / `kill` (this document says `build` / `shelve` / `kill` /
+> `pivot`, which no skill implements and no schema accepts), and the shared protocol now lives in
+> [`references/protocol.md`](../references/protocol.md), not in a `CONVENTIONS.md`.
+>
+> For current behaviour see [`references/protocol.md`](../references/protocol.md) and
+> [`references/dialogue.md`](../references/dialogue.md).
+
 A set of 8 Claude Code skills (7 workflow + 1 utility) that guide any user through maturing a business idea from raw thought to a clear go/no-go verdict. Skills are opinionated, brutal-honesty, and produce persistent per-idea artifacts.
 
 ## Purpose
