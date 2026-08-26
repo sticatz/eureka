@@ -10,25 +10,36 @@ This is not a brainstorming pad. The single job is to produce a decision you can
 
 ## Install
 
-In a Claude Code session, run:
+`sticatz` is the marketplace (the org). `eureka` is the plugin inside it. Installing is two steps: add the marketplace, then install the plugin from it.
+
+In a Claude Code session:
 
 ```
-/plugin marketplace add brunoteo/eureka
-/plugin install eureka@brunoteo-eureka
+/plugin marketplace add sticatz/eureka
+/plugin install eureka@sticatz
 ```
 
-Or clone locally and add as a local marketplace:
+That's it — the slash commands below are now available.
+
+<details>
+<summary>Installing from a local clone instead</summary>
 
 ```bash
-git clone https://github.com/brunoteo/eureka.git
+git clone https://github.com/sticatz/eureka.git
 ```
 
-Then in Claude Code:
+Then in Claude Code, point the marketplace at the clone's directory:
 
 ```
-/plugin marketplace add ./path/to/eureka
-/plugin install eureka@eureka
+/plugin marketplace add /absolute/path/to/eureka
+/plugin install eureka@sticatz
 ```
+
+The marketplace is still called `sticatz` — the name comes from `.claude-plugin/marketplace.json`, not from where the files live.
+
+</details>
+
+To update later: `/plugin marketplace update sticatz`.
 
 ## Quick start
 
