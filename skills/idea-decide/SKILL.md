@@ -1,133 +1,158 @@
 ---
 name: idea-decide
-description: Use when the user wants a final verdict on an idea — "should we build this?", "go or kill?", "is this worth pursuing?". Requires ALL prior phases (concept, validate, gtm, feasibility, mvp) to be complete. Do NOT use for MVP scoping (idea-mvp).
-argument-hint: [idea-name]
+description: This skill should be used when a business idea has all five prior Eureka artifacts complete and the user wants the terminal verdict — triggered by "should I build this idea?", "go or kill on this business idea?", "is this idea worth pursuing?", or an explicit /eureka:idea-decide. Writes DECISION.md and SUMMARY.md. Requires CONCEPT, VALIDATION, GTM, FEASIBILITY and MVP all complete. Not for MVP scoping (idea-mvp).
+argument-hint: "[idea-name]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch, WebFetch, Agent, AskUserQuestion
 ---
 
-# Idea Decide — Phase 6: Verdict
+# Idea Decide — phase 6: the verdict
 
-Synthesize all prior thinking into a terminal verdict: **go**, **park**, or **kill**. This is the product — every phase exists to serve this decision.
+Synthesize everything into **go**, **park** or **kill**. Every prior phase exists to serve this.
 
-## On Start
+## On start
 
-1. Read `CONVENTIONS.md` for shared protocols.
-2. If `$ARGUMENTS` is provided, use it as the idea slug. Otherwise ask: "Which idea?"
-3. Set the working directory to `ideas/<idea-slug>/`.
-4. **Hard gate (no override):** ALL 5 prior artifacts must exist with `status: complete`:
-   - `CONCEPT.md`
-   - `VALIDATION.md`
-   - `GTM.md`
-   - `FEASIBILITY.md`
-   - `MVP.md`
-   
-   If any are missing or `status` is not `complete`:
-   > "Can't reach a verdict without the homework. Missing or incomplete: [list with status]. Run the earlier phases first."
-   
-   **No override.** Deciding without the analysis defeats the purpose.
+1. Load the shared rules:
 
-5. Check if `DECISION.md` exists — if so, read it and pick up where things left off.
-6. Read ALL 5 prior artifacts thoroughly. Extract:
-   - Each phase's `verdict` (traffic light)
-   - Each phase's `evidence_strength`
-   - Every `overridden` / `override_reason` pair
-   - Every entry in each phase's `gaps` array, split into:
-     - **Unresolved** (`resolved: false`) — count by severity
-     - **Resolved** (`resolved: true`) — note `resolved_in` date, treat as positive signal
-   - All `key_risks` across phases
+   ```bash
+   cat "${CLAUDE_PLUGIN_ROOT}/references/protocol.md"
+   cat "${CLAUDE_PLUGIN_ROOT}/references/dialogue.md"
+   ```
 
-   CONCEPT.md has no `gaps` field (first phase). Every other prior artifact does.
+   If either cannot be read, stop — Eureka is misinstalled.
 
-## The Decision Process
+2. Resolve the idea folder with `eureka.py root`; slug from `$ARGUMENTS` or ask. Print the path.
 
-### Step 1: Evidence inventory
+3. **Gate C — hard gate, no override.** Run `eureka.py status <slug>` and read `decide_ready`. If
+   false:
 
-Before arguing either side, lay out the evidence foundation:
+   > "Can't reach a verdict without the homework. Missing or incomplete: [list with status]. Run
+   > the earlier phases first."
 
-For each prior phase, state:
-- **Verdict:** proceed / proceed-with-caution / killer
-- **Evidence strength:** strong / medium / weak
-- **Override taken?** If yes, what was the reason?
-- **Gaps logged in this artifact?** For each, list `{phase, severity, note}` and whether `resolved`.
-- **Key risks:** the risk tags
+   There is no override. Deciding without the analysis defeats the purpose.
 
-This is the raw material. Present it honestly — don't spin it.
+4. Read all five artifacts in full, and take the computed state from `status` rather than
+   recomputing it: per-phase `verdict` and `evidence_strength`, every `overrides` entry,
+   every gap split by resolved and severity, `evidence_cap`, `stale_artifacts`, `go_available` and
+   `go_blockers`.
 
-### Step 2: Steel-man both sides
+   **Read `tests` too, and read every file in `tests/`.** These are the only claims in the folder
+   that were checked against the world rather than reasoned about, so they outrank everything else
+   in the inventory. For each: the pre-registered threshold, the filtered result, and the outcome.
+   A `falsified` outcome or a test still `running` already appears in `go_blockers`.
 
-**The case FOR go:**
-- Strongest arguments from across all 5 phases.
-- What makes this worth building?
-- What's the upside scenario if the MVP succeeds?
-- Reference specific findings: "Validation found [X], GTM identified [channel] with [CAC], feasibility confirmed [Y]."
+   If `tests` is empty, say so plainly in Step 1 and carry it into the case against: the entire
+   analysis is reasoning about what the user believed at the outset, and nothing in it has been
+   checked. That is not disqualifying — at low `stakes` it can be perfectly rational — but it is
+   the single most important fact about the evidence base and it must not be buried.
 
-**The case AGAINST go:**
-- Strongest counterarguments from across all 5 phases.
-- Every killer verdict, even if overridden.
-- Every weak evidence assessment.
-- Every unresolved gap.
-- Every key risk.
-- **Moat assessment:** Is this defensible over time? (Network effects, data, switching costs, brand, community, regulatory advantage.) If there's no moat, say so — a viable business with no defensibility is a different risk profile than one with compounding advantages. Draw on GTM's channel competition and feasibility's technical analysis to assess.
-- **Do NOT soften this.** The user needs the full picture. If the idea should die, say so clearly.
+   If `stale_artifacts` is non-empty, say so before anything else. Synthesizing a confident verdict
+   across artifacts that describe two different versions of the idea is the worst failure available
+   here.
 
-### Step 3: Weigh overrides and gaps
+## Step 1 — evidence inventory
 
-**Overrides are signal:**
-- An override with a strong reason ("hypothesis is cheap to test, worst case we lose 2 weeks") is a reasonable gamble.
-- An override with a weak reason ("I just want to try") is a yellow flag.
-- Multiple overrides compound — each one is a place where the analysis said "stop" and the user said "go."
+Lay out the foundation before arguing either side. Per phase: verdict, evidence strength, gaps
+logged (with id, target phase, severity, resolved), key risks. Plus the override records and what
+each one was for. Present it straight — do not spin it.
 
-**Unresolved gaps are signal.** Apply the threshold rule from CONVENTIONS.md Gating Protocol B:
+## Step 2 — dispatch the red team
 
-- Count `significant` unresolved gaps across all 4 downstream artifacts (VALIDATION, GTM, FEASIBILITY, MVP — CONCEPT has no gaps field).
-- **1 significant unresolved gap** → advisory note in Step 3, no cap.
-- **2 significant unresolved gaps** → the decide `evidence_strength` **cannot exceed `medium`**, regardless of how strong the prior phases looked individually.
-- **3+ significant unresolved gaps** → the decide `evidence_strength` **cannot exceed `weak`**. At this point, the recommended verdict is `park` at best unless the user articulates why the gaps are tolerable — and that articulation goes into DECISION.md verbatim.
-- Minor unresolved gaps accumulate as prose commentary but do not trigger the cap.
+**Before writing the case against**, dispatch the `idea-red-team` subagent with the absolute path
+to the idea folder.
 
-**Resolved gaps are positive signal.** An entry where `resolved: true` means the user went back, closed the loop, and didn't just wave it away. Mention these in Step 3 as evidence that the analysis was iterated in good faith. Do not count them toward the cap.
+It reads the artifacts and never sees this conversation. That is the point: by now this session has
+spent many turns helping the user articulate their idea and writing the artifacts in its own voice,
+and every pressure available — rapport, consistency with what it already wrote, ordinary politeness
+— points toward a generous reading. A critique from something that was not in the room is the only
+structural fix for that.
 
-Weigh all of this explicitly. Don't just mention — state how it affects the verdict. If the cap kicks in, name it: "Two significant unresolved gaps (feasibility→gtm, mvp→concept) cap this decision's evidence_strength at medium, per Gating Protocol B."
+Its output is an input, not a draft to edit:
 
-### Step 4: Make a recommendation
+- Its `FATAL` and `SERIOUS` findings enter Step 3 **verbatim**. Do not soften, requalify, or
+  paraphrase them into something gentler. If one is wrong, rebut it explicitly with evidence from
+  the artifacts and show the rebuttal — do not quietly drop it.
+- Its `EVIDENCE_STRENGTH` is an independent grade of the same files. **Take the lower of that and
+  the one derived from the phase artifacts.**
+- Its `NEVER ASKED` list names dimensions the six phases did not interrogate at all. Those are
+  usually the most valuable lines in the whole report.
 
-State your verdict:
+If the subagent is unavailable, say so explicitly in DECISION.md rather than skipping silently —
+a decision made without the adversarial pass is a weaker decision and the record should show it.
 
-**Go:** 
-- Summarize the MVP scope (from MVP.md).
-- Concrete next steps: create the repo, define first tasks, set up the first channel.
-- What to watch for — the risks that could still derail this.
+## Step 3 — steel-man both sides
 
-**Park:**
-- What specific new information would change this to a go. Be concrete: "if you can demonstrate [X] through [method], revisit."
-- For pivot-style parks: which insight from the analysis is valid, what to sharpen, which phase to restart from.
-- When to revisit — a trigger event, not a calendar date.
+**The case FOR.** The strongest arguments across all five phases. What makes this worth building?
+What is the upside if the MVP succeeds? Cite specific findings: "validation found X, GTM identified
+[channel] at [CAC] against a price of [Y], feasibility confirmed Z."
 
-**Kill:**
-- Name the fatal flaw directly.
-- What would have to be fundamentally different for this to work. (Not "try harder" — what structural change?)
-- What's salvageable — any insights from the analysis worth carrying forward.
+**The case AGAINST.** The strongest counterarguments, including the red team's findings verbatim.
+Every killer verdict, even overridden ones. Every weak evidence assessment. Every unresolved gap.
+Every key risk.
 
-**Own the recommendation.** No hedging. "It depends on your risk tolerance" and "only you can decide" are banned. Have an opinion and defend it.
+Plus, explicitly:
 
-### Step 5: User decides
+- **Moat.** Is this defensible over time — network effects, data, switching costs, brand,
+  community, regulatory position, distribution already held? If there is no moat, say so. A viable
+  business with no defensibility is a real outcome but a different risk profile.
+- **Monetization.** Did any phase establish what is charged, to whom, per what unit, and why they
+  pay it? If GTM did not settle this, the idea has no revenue model and that belongs here.
+- **Why this operator.** Does anything establish why this user wins this? An idea can be good and
+  unwinnable by the person holding it.
 
-Present the recommendation and wait. The user has the final word. If they disagree:
-- Ask them to articulate why.
-- Capture their reasoning in DECISION.md.
-- Their decision stands — but the analysis goes on record.
+**Do not soften this.** If the idea should die, say so plainly.
 
-## Red Flags
+## Step 4 — weigh overrides and gaps
 
-When you hear any of these, respond with the pushback directly in prose. Do not accept a verdict without engagement.
+**Overrides.** Judge each reason on its merits. "The hypothesis is cheap to test, worst case two
+weeks" is a rational gamble. "Gut feeling" is a flag. Note that one override recorded once covers
+one killer verdict — count distinct overrides, not the number of phases that inherited them.
 
-| User says | Skill responds |
+**Gaps.** Read `evidence_cap` from `status`; it already excludes duplicates. Two unresolved
+significant gaps cap evidence at `medium`, three or more at `weak`. Name the cap when it applies.
+Resolved gaps are positive signal — the user went back and closed a loop rather than waving it away
+— and should be said out loud.
+
+**Stakes.** Read `stakes` from CONCEPT.md. The bar scales: at low stakes, thin evidence plus a
+cheap falsifying test is a rational `go`, and treating a weekend project like a funded bet is its
+own kind of wrong answer. At high stakes the reverse. Say which regime this is in.
+
+## Step 5 — the verdict
+
+Read `go_available` and `go_blockers` from `status`. **Where `go_available` is false, `go` is not
+on the table** — the blockers name why, and every one of them is either weak evidence in a
+load-bearing phase or an unaddressed killer. This is a floor, not a formula: a clean
+`go_available: true` does not oblige a `go`, it only means the reasoning below governs.
+
+**Go** — summarize the MVP scope, give concrete next steps, name what could still derail it.
+
+**Park** — name a concrete `revisit_trigger`: an event or a specific obtainable fact, never a
+calendar date. "If you can get three of the five interviewees to pre-pay, revisit." Where the
+blockers were evidence gaps, those gaps *are* the trigger. For pivot-style parks: which insight is
+valid, what to sharpen, which phase to restart from.
+
+**Kill** — name the fatal flaw directly. What would have to be structurally different, not "try
+harder". What is salvageable.
+
+**Own the recommendation.** "It depends on your risk tolerance" and "only you can decide" are
+banned. Have an opinion and defend it.
+
+## Step 6 — the user decides
+
+Present it and wait. The user has the final word. If they disagree, ask them to articulate why,
+capture the reasoning in DECISION.md, and let their decision stand — with the analysis on record
+beside it.
+
+## Red flags
+
+| User says | Respond |
 |---|---|
-| "Let's just go for it" (without engaging) | "Which specific finding makes you confident? The analysis surfaced [risks]. Have you thought through those?" |
-| "I don't care about the risks" | "The risks don't care. Which ones have you thought through, and which are you choosing to accept?" |
+| "Let's just go for it" | "Which specific finding makes you confident? The analysis surfaced [risks] — have you thought those through?" |
+| "I don't care about the risks" | "The risks don't care either. Which have you thought through, and which are you choosing to accept?" |
 | "It feels right" | "Gut is data, but what evidence supports the feeling? The analysis says [X]." |
-| "Let's park it" (as avoidance) | "Park needs a concrete trigger — what event or information would bring you back? Otherwise this is a comfortable kill." |
-| "Kill it" (without engaging) | "Which finding drove that? The case-for had [X]. Are you sure the analysis doesn't support proceeding?" |
-| "Can we just do a smaller version?" | "That's what MVP.md scopes. Does the MVP scope work, or do you want to revise it?" |
+| "Let's park it" (as avoidance) | "Park needs a concrete trigger — what event or fact brings you back? Otherwise this is a comfortable kill, and a real kill is more useful." |
+| "Kill it" (without engaging) | "Which finding drove that? The case for had [X]. Are you sure the analysis doesn't support proceeding?" |
+| "Can we do a smaller version?" | "That's what MVP.md scopes. Does the scope work, or do you want to revise it?" |
+| "The red team is being unfair" | "Take one finding and rebut it from the artifacts. If the evidence is there, I'll record the rebuttal — if it isn't, that's the finding." |
 
 ## Writing DECISION.md
 
@@ -138,40 +163,68 @@ status: in-progress
 verdict: null
 evidence_strength: null
 key_risks: []
-overridden: false
-override_reason: null
+created: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+covered: []
+pending: []
+last_question: null
+overrides: []
+revisit_trigger: null
 ---
 ````
 
 ````markdown
 # <Idea Name> — Decision
 
-## Verdict: go | park | kill
-
+## Verdict
 ## Evidence Inventory
-[Per-phase table: verdict, evidence_strength, overrides, gaps (split into unresolved/resolved with severity), key risks]
-
 ## The Case For
-[Steel-manned argument for building — citing specific phase findings]
-
 ## The Case Against
-[Steel-manned argument against — not softened, citing specific phase findings]
-
+## Red Team Findings
 ## Override and Gap Analysis
-[How overrides and unresolved gaps affected the verdict. Apply the threshold rule explicitly: count significant unresolved gaps, name the cap if triggered. Call out resolved gaps as positive signal.]
-
 ## Reasoning
-[Why this verdict — which findings drove it, how evidence was weighed]
-
 ## What Would Change This
-[For park: specific triggers. For kill: structural changes needed. For go: what could still derail.]
-
 ## Next Steps
-[For go: concrete actions, starting with MVP. For park: revisit conditions. For kill: salvageable insights.]
 ````
 
+`## Red Team Findings` carries the subagent's output as received, plus any rebuttal with its
+evidence. It is a record of what the adversarial pass said, not a summary of it.
+
 **On completion:**
-- `status: complete`
 - `verdict: go | park | kill`
-- `evidence_strength` — overall quality of evidence across all 5 phases, respecting the significant-gaps cap from Gating Protocol B.
-- `key_risks` — the top risks, regardless of verdict.
+- `evidence_strength` — the lower of the phase-derived grade and the red team's, respecting
+  `evidence_cap`.
+- `revisit_trigger` — required when the verdict is `park`.
+- `key_risks` — the top risks regardless of verdict.
+
+## Then write SUMMARY.md
+
+DECISION.md is written for the machine — it is full of `proceed-with-caution`, `evidence_cap` and
+gap severities, and a cofounder reading it learns about Gating Protocol B. Write a second file
+alongside it, in plain language, with none of Eureka's internal vocabulary:
+
+````markdown
+# <Idea Name>
+
+**Verdict:** <go | park | kill>, <date>
+
+## The idea
+<Two sentences. Problem, user, approach.>
+
+## What we know
+<The evidenced claims, each with its source and the source's date.>
+
+## What we're assuming
+<The load-bearing assumptions, ranked, with what it would take to check each.>
+
+## The three biggest risks
+## The test
+<From MVP.md, in five lines: what gets built, what gets faked, what number means it worked,
+what number means it stops, how long.>
+
+## What would change the answer
+````
+
+This is the artifact that gets sent to a cofounder, shown to an advisor, or read by the user in six
+months. Every claim in it carries its source and date, because a claim whose provenance is lost is
+not something anyone can act on later.

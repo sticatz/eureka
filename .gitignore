@@ -1,0 +1,17 @@
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
+
+# Claude Code local state
+.claude/settings.local.json
+
+# Ideas are the user's own work, not part of the plugin.
+# Eureka writes them into whichever workspace you run it from.
+/ideas/
+
+# ...but the eval fixtures are deliberately committed idea folders.
+!evals/fixtures/**/ideas/

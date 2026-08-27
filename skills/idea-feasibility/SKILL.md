@@ -1,107 +1,141 @@
 ---
 name: idea-feasibility
-description: Use when an idea has been through concept, validation, and GTM, and the user wants to evaluate whether it can be built, run, afforded, and legally operated. Trigger on "can we build this?", "is this feasible?", "what would it cost?", "any legal issues?", or when moving from GTM to feasibility. Requires CONCEPT.md, VALIDATION.md, and GTM.md. Do NOT use for distribution (idea-gtm) or MVP scoping (idea-mvp).
-argument-hint: [idea-name]
+description: This skill should be used when a business idea has Eureka's CONCEPT.md, VALIDATION.md and GTM.md complete and the user wants to evaluate whether it can be built, run, afforded and legally operated at the scale GTM implies — triggered by "is this idea feasible?", "can we actually build this business?", "what regulations apply to this idea?", or an explicit /eureka:idea-feasibility. Writes FEASIBILITY.md. Not for distribution (idea-gtm) or MVP scoping (idea-mvp).
+argument-hint: "[idea-name]"
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch, WebFetch, AskUserQuestion
 ---
 
-# Idea Feasibility — Phase 4
+# Idea Feasibility — phase 4
 
-Can we build, run, afford, and legally operate this at the scale GTM implies? Four sub-concerns, evaluated against real distribution numbers — not in the abstract.
+Can this be built, run, afforded and legally operated at the scale GTM implies? Four sub-concerns,
+judged against real numbers rather than in the abstract.
 
-## On Start
+**Key framing:** "Can we build it?" is never abstract here. It is "can we build it to serve the
+volume and channels GTM describes, at a cost that works against the price GTM set?"
 
-1. Read `CONVENTIONS.md` for shared protocols.
-2. If `$ARGUMENTS` is provided, use it as the idea slug. Otherwise ask: "Which idea?"
-3. Set the working directory to `ideas/<idea-slug>/`.
-4. **Gate check:**
-   - Read `CONCEPT.md`, `VALIDATION.md`, `GTM.md`. All must exist with `status: complete`.
-   - If any missing: "Feasibility needs concept, validation, and GTM. Missing: [list]."
-   - If any has `verdict: killer`, apply the killer-verdict gate per CONVENTIONS.md.
-5. Check if `FEASIBILITY.md` exists — if so, pick up where things left off.
-6. **Gap resolution scan (rerun only):** If `FEASIBILITY.md` already exists, run Protocol B' per `CONVENTIONS.md` — scan `MVP.md` (the only later artifact) for `gaps` entries where `phase: feasibility` and `resolved: false`, surface them, flip `resolved` on confirmed resolution.
-7. Read all three priors. You need:
-   - The target user and problem (CONCEPT.md)
-   - The demand signal and alternatives (VALIDATION.md)
-   - The channels, volume expectations, and cost structure (GTM.md)
+## On start
 
-**Key framing:** Feasibility is judged *against the scale GTM implies*. "Can we build it?" isn't abstract — it's "can we build it to serve the volume and channels GTM describes, at a cost that works?"
+1. Load the shared rules:
 
-## How to Explore
+   ```bash
+   cat "${CLAUDE_PLUGIN_ROOT}/references/protocol.md"
+   cat "${CLAUDE_PLUGIN_ROOT}/references/dialogue.md"
+   ```
 
-**Use `AskUserQuestion` to drive the conversation.** Weave across all four sub-concerns — don't do them sequentially. They interact: a technical choice affects resource costs; a legal constraint limits operational approach; resource limits shrink what's technically possible. Follow whatever thread the user's answer opens.
+   If either cannot be read, stop — Eureka is misinstalled.
 
-Feasibility doesn't exist in isolation — every sub-concern connects back to prior phases. When a finding in any dimension tensions against what GTM, validation, or concept established, surface it immediately. Don't save cross-cutting tensions for later — they're often the most important findings. Examples: a technical choice that breaks unit economics, an operational burden that doesn't scale to GTM's volume, a legal constraint that blocks the primary channel, a resource requirement that exceeds what the market size justifies.
+2. Resolve the idea folder with `eureka.py root`; slug from `$ARGUMENTS` or ask. Print the path.
 
-When you surface a tension, the user will either resolve it (e.g., change approach) or accept the risk and move on. Both are valid — but they have different consequences for the artifact. Resolved tensions are recorded as resolved in Cross-Cutting Tensions. Accepted-but-unresolved tensions become entries in `key_risks` and pull `evidence_strength` down, which idea-decide will weigh against the idea.
+3. **Gate check.** Run `eureka.py status <slug>`. CONCEPT.md, VALIDATION.md and GTM.md must all be
+   `complete`. Apply Gate A to any `killer`, checking `overrides` first. Surface `stale_artifacts`.
 
-### 1. Technical Feasibility
-- What are the core technical challenges? (Not "what's the tech stack" — what's *hard* about building this?)
-- Are there technical risks or unknowns? Things that might not work?
-- External dependencies — APIs, data sources, services. What happens if they change pricing, rate-limit, or shut down?
-- Build vs buy decisions — where does custom code add value vs where does off-the-shelf work?
-- Scale requirements — given GTM's volume shape, what does the architecture need to handle?
+4. Read all three priors. Needed: target user, `stakes` and `idea_class` (CONCEPT.md); demand
+   signal and alternatives (VALIDATION.md); channels, volume shape, price and unit economics
+   (GTM.md).
 
-### 2. Operational Feasibility
-- What does running this look like day-to-day? (Infrastructure, support, content, moderation, manual processes)
-- What breaks at scale? (Something that works for 100 users might collapse at 10,000.)
-- What's the operational burden per user? (High-touch vs self-serve)
-- Are there operational dependencies on specific people, skills, or vendors?
+5. **Gap scan (rerun only).** Collect gaps where `phase: feasibility` and `resolved: false`.
 
-### 3. Resource Feasibility
-- What does this cost to build? (Time, people, money — rough order of magnitude.)
-- What does it cost to run monthly? (Infrastructure, salaries, services, support.)
-- Given GTM's CAC and the revenue model from prior phases — do the numbers work?
-- What's the runway needed to reach sustainability? (Months to breakeven, not "eventually.")
-- Who builds this? Solo founder, small team, outsourced? Is that realistic for the complexity?
+## How to explore
 
-Surface tensions with GTM's cost structure explicitly: "GTM says CAC is $X, feasibility says operating cost per user is $Y. With revenue at $Z/user, the margin is [positive/negative]."
+Weave across the four sub-concerns rather than marching through them — they interact. A technical
+choice moves resource cost; a legal constraint closes an operational route; a resource limit
+shrinks what is technically possible.
 
-### 4. Legal and Compliance
-- Are there regulations that apply? (Data privacy, financial services, healthcare, food safety, employment law, etc.)
-- Licensing requirements?
-- Liability exposure?
-- Terms of service risks from platforms or APIs you'd depend on?
-- International considerations if GTM targets multiple markets?
+Branch on `idea_class`. The sub-concerns below are written software-first; for other classes the
+dominant risk sits elsewhere and must be asked about explicitly:
 
-Don't assume compliance is simple. "We'll just handle it" is a red flag. If the user doesn't know the regulatory landscape, mark it as a key risk.
-
-## Handling Depth Gaps
-
-Feasibility often exposes weaknesses in **any** earlier phase — a concept target user that can't be served at technical cost, a validation claim that ignores operational burden, a GTM channel whose scale implies infrastructure nobody priced. Log a `gaps` entry per `CONVENTIONS.md` Protocol B and continue. Advisory, not blocking.
-
-A single feasibility finding may produce gaps in multiple earlier phases — record each separately against the phase where the thinking lives. Pick severity honestly (`significant` = could flip the decide verdict).
-
-## Red Flags
-
-When you hear any of these, respond with the pushback directly in prose. Do not accept the answer and continue.
-
-| User says | Skill responds |
+| `idea_class` | Ask about, beyond the four below |
 |---|---|
-| "We'll figure out the tech later" | "The tech determines whether this is a weekend project or a 6-month build. What's the hardest technical problem?" |
+| `physical` | Working capital. Unit cost at realistic volume, minimum order quantity, lead time, landed cost including duty and freight, storage, returns rate, cash tied up before the first sale. This is what kills physical-goods businesses, and a software-shaped feasibility pass will miss it entirely. |
+| `service` / agency | Utilization and key-person risk. Who delivers, at what billable rate and what utilization? What happens when the founder is the product and gets sick, or wants a holiday? How does delivery scale without linear headcount? |
+| `marketplace` | Trust, liability and disintermediation. Who is liable when a transaction goes wrong? What stops both sides transacting off-platform after the first match? |
+| `content` | Production cadence and platform dependency. What is the sustainable output rate, and what happens when the platform changes its distribution algorithm? |
+
+### 1. Technical
+- What is genuinely *hard* here — not "what's the stack", but what might not work?
+- Technical risks and unknowns.
+- External dependencies: APIs, data sources, services. What happens if they reprice, rate-limit or
+  shut down?
+- Build versus buy: where does custom work add value, where does off-the-shelf win?
+- What does GTM's volume shape require of the architecture?
+
+### 2. Operational
+- What does running this look like day to day — infrastructure, support, content, moderation,
+  manual work?
+- What breaks at scale? Something that works for 100 users can collapse at 10,000.
+- Operational burden per user: high-touch or self-serve?
+- Dependencies on specific people, skills or vendors.
+
+### 3. Resource
+- Cost to build: time, people, money, to an order of magnitude.
+- Cost to run monthly: infrastructure, salaries, services, support.
+- Against GTM's CAC and price: **do the numbers work?** State it explicitly — "GTM says CAC is $X,
+  operating cost per user is $Y, revenue per user is $Z, so contribution margin is …"
+- Runway to sustainability, in months to breakeven — not "eventually".
+- Who builds this, and is that realistic for the complexity?
+
+### 4. Legal and compliance
+- Which regulations apply — data protection, financial services, health, food safety, employment,
+  consumer protection, sector-specific licensing?
+- Licensing requirements. Liability exposure. Platform terms-of-service risk.
+- International considerations if GTM targets multiple markets.
+
+**Never resolve regulatory ignorance by recording a risk.** Load and follow:
+
+```bash
+cat "${CLAUDE_PLUGIN_ROOT}/references/research.md"
+```
+
+Regulatory and licensing is the highest-yield search target in the whole framework: user knowledge
+is lowest and public ground truth is highest. Search the regulator, the licensing body, the
+data-protection regime. An idea that is flatly illegal at GTM's implied scale is `killer`, not
+`proceed-with-caution` — and the only way to know is to look. The same applies to vendor pricing,
+API rate limits and salary benchmarks: look them up before calling them unknown.
+
+### Cross-cutting tensions
+Every sub-concern connects back to earlier phases. When a finding pulls against what GTM,
+validation or concept established, surface it immediately — these are usually the most important
+findings. A technical choice that breaks unit economics. An operational burden that cannot scale
+to GTM's volume. A legal constraint that closes the primary channel. A resource requirement that
+exceeds what the market size justifies.
+
+When a tension is surfaced, the user either resolves it or accepts it. Both are valid and they
+have different consequences: a resolved tension is recorded as resolved; an accepted one becomes a
+`key_risks` entry and pulls `evidence_strength` down.
+
+## Depth gaps
+
+Feasibility exposes weakness in **any** earlier phase. A single finding may produce gaps in
+several — record each against the phase where the thinking lives, check for duplicates, and set
+`duplicate_of` where the weakness is already logged.
+
+## Red flags
+
+| User says | Respond |
+|---|---|
+| "We'll figure out the tech later" | "The tech decides whether this is a weekend or six months. What's the hardest technical problem?" |
 | "It's just a simple app" | "Simple how? Walk me through what happens when a user does X. Where does the complexity hide?" |
-| "We'll hire for that" | "Hire whom, at what cost, in what timeline? Is that talent available for what you can pay?" |
-| "Legal won't be an issue" | "How do you know? What regulations could apply? If you're not sure, that's a risk we need to flag." |
-| "We'll scale when we need to" | "GTM says you need to handle [X users/transactions]. Can the initial build handle that, or is a rewrite baked in?" |
-| "It'll cost about $X" (vague) | "Break it down. Infrastructure? Salaries? Services? Vague cost estimates hide surprises." |
-| "We can outsource the whole thing" | "Outsource to whom? At what quality? Who manages the relationship? Outsourcing has coordination costs." |
-| User can't answer a question | Don't fill in guesses. Flag it as a key risk and move on. Unknown feasibility dimensions are critical inputs for decide. |
+| "We'll hire for that" | "Hire whom, at what cost, in what timeline? Is that person available for what you can pay?" |
+| "Legal won't be an issue" | "How do you know? Let me look up what applies before we record that." |
+| "We'll scale when we need to" | "GTM says you need to handle [X]. Can the first build take that, or is a rewrite already baked in?" |
+| "It'll cost about $X" (vague) | "Break it down — infrastructure, salaries, services. Vague estimates hide the surprises." |
+| "We can outsource the whole thing" | "To whom, at what quality, managed by whom? Outsourcing has coordination costs." |
+| "We'll just hold a bit of stock" | "How much cash is tied up before the first sale, at what minimum order quantity, with what lead time? That's where physical businesses die." |
 
-## Boundary Enforcement
-
-**Never cross these boundaries.** Redirect every time, no exceptions.
+## Staying in scope
 
 | Drift toward | Response |
 |---|---|
-| Revisiting problem or demand | "That's VALIDATION.md territory. If you want to revise it, rerun `/eureka:idea-validate`. Here we're evaluating whether the validated problem can be feasibly addressed." |
-| Distribution strategy changes | "Channel strategy lives in GTM.md. If feasibility suggests a channel won't work at scale, I'll log a `gtm` gap entry in this artifact's frontmatter and flag it for decide." |
-| MVP scoping | "We'll get to MVP scope next — right now we need to know what's feasible before we scope what to build." |
-| Verdict | "Not yet — MVP scoping still needs to happen. Then decide." |
+| Revisiting problem or demand | "VALIDATION.md territory. If it needs revising, rerun `/eureka:idea-validate` — I'll log a gap. Here we're asking whether the validated problem can be feasibly served." |
+| Changing channel strategy | "Channel strategy lives in GTM.md. If feasibility says a channel won't work at scale, I'll log a `gtm` gap and flag it for decide." |
+| MVP scoping | "Next phase. First we need to know what's feasible before scoping what to build." |
+| Verdict | "Not yet — MVP still has to happen." |
 
-## Phase Transition
+## Phase transition
 
-When all four sub-concerns have been explored:
-
-> "Here's the feasibility picture: [summary — technical complexity, operational burden, cost structure, legal flags]. When you're ready, `/eureka:idea-mvp` will scope the smallest concrete thing you could ship to test the core hypothesis. Want to dig deeper, or move on?"
+> "Here's the feasibility picture: [technical complexity, operational burden, cost structure,
+> legal findings, and whether the unit economics close]. When you're ready, `/eureka:idea-mvp`
+> scopes the smallest thing that tests the core hypothesis. Want to dig deeper, or move on?"
 
 **Never auto-transition.**
 
@@ -114,41 +148,37 @@ status: in-progress
 verdict: null
 evidence_strength: null
 key_risks: []
-overridden: false
-override_reason: null
+created: <YYYY-MM-DD>
+updated: <YYYY-MM-DD>
+covered: []
+pending: []
+last_question: null
+overrides: []
 gaps: []
 ---
 ````
 
 ````markdown
-# <Idea Name> — Feasibility Analysis
+# <Idea Name> — Feasibility
 
 ## Technical
-[Core challenges, risks, dependencies, build vs buy, scale requirements]
-
 ## Operational
-[Day-to-day running, what breaks at scale, per-user burden]
-
 ## Resource
-[Build cost, run cost, runway to sustainability, team requirements]
-
 ## Legal and Compliance
-[Applicable regulations, licensing, liability, platform ToS risks]
-
 ## Cross-Cutting Tensions
-[Where sub-concerns conflict — e.g., technical approach is expensive but cheaper approach has legal risk]
-
 ## Cost vs Revenue Reality
-[Explicit math: GTM's CAC + operating cost vs revenue per user. Does it work?]
+## Evidence vs Assumptions
+## Sources
 ````
 
-Adapt to what emerged.
+`## Evidence vs Assumptions` and `## Sources` are required. `## Cost vs Revenue Reality` must show
+the explicit arithmetic against GTM's CAC and price, not a narrative summary of it.
 
 **On completion:**
-- `verdict: proceed` — all four sub-concerns are green or yellow with mitigations.
-- `verdict: proceed-with-caution` — one or more sub-concerns are red but addressable.
-- `verdict: killer` — illegal at GTM's implied scale, or resource gap is unbridgeable, or technical approach is fundamentally unworkable.
-- `evidence_strength` — based on how much rests on estimates vs actual research/quotes/data.
-- `key_risks` from each sub-concern.
-
-**Save after each significant exchange.**
+- `verdict: proceed` — all four sub-concerns green, or yellow with named mitigations.
+- `verdict: proceed-with-caution` — one or more red but addressable.
+- `verdict: killer` — illegal or unlicensable at GTM's implied scale, the resource gap is
+  unbridgeable, or the technical approach is fundamentally unworkable.
+- `evidence_strength` — how much rests on looked-up facts, quotes and price pages versus estimates.
+  A phase that searched nothing cannot be `strong`.
+- `key_risks` — from each sub-concern.

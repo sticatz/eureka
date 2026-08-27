@@ -1,9 +1,20 @@
 {
   "name": "eureka",
-  "description": "Push business ideas from raw thought to a defensible go/park/kill verdict. 8 skills guide you through structured thinking: concept, validation, GTM, feasibility, MVP scoping, and a terminal decision.",
-  "version": "1.0.0",
+  "description": "Push business ideas from raw thought to a defensible go/park/kill verdict. Nine skills guide structured thinking: concept, validation, GTM, feasibility, MVP scoping, pre-registered experiments, and a terminal decision.",
+  "version": "1.1.0",
   "author": {
     "name": "sticatz"
   },
-  "repository": "https://github.com/sticatz/eureka"
+  "homepage": "https://github.com/sticatz/eureka",
+  "repository": "https://github.com/sticatz/eureka",
+  "license": "MIT",
+  "keywords": [
+    "business-idea",
+    "validation",
+    "product-discovery",
+    "go-to-market",
+    "feasibility",
+    "mvp",
+    "decision-making"
+  ]
 }

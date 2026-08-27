@@ -3,14 +3,23 @@
   "owner": {
     "name": "sticatz"
   },
+  "description": "Plugins by sticatz. Currently: Eureka, for taking a business idea from raw thought to a defensible go/park/kill verdict.",
   "plugins": [
     {
       "name": "eureka",
-      "source": {
-        "source": "github",
-        "repo": "sticatz/eureka"
-      },
-      "description": "Push business ideas from raw thought to a defensible go/park/kill verdict"
+      "source": "./",
+      "description": "Push business ideas from raw thought to a defensible go/park/kill verdict. Nine skills guide structured thinking: concept, validation, GTM, feasibility, MVP scoping, pre-registered experiments, and a terminal decision.",
+      "category": "productivity",
+      "license": "MIT",
+      "keywords": [
+        "business-idea",
+        "validation",
+        "product-discovery",
+        "go-to-market",
+        "feasibility",
+        "mvp",
+        "decision-making"
+      ]
     }
   ]
 }

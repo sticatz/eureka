@@ -1,131 +1,125 @@
 ---
 name: idea-start
-description: Use at the start of ANY conversation about ideas in this repository. Lists existing ideas with their current phase, briefs the user on the workflow and what to expect, and routes to the right phase skill. Trigger when someone opens a conversation about ideas, wants to work on an idea, asks "what should I do next?", or you're unsure which idea skill to use. This is always the entry point.
+description: List the business ideas in this workspace and route to the right Eureka phase.
+argument-hint: "[idea-name]"
+disable-model-invocation: true
+allowed-tools: Read, Glob, Grep, Bash
 ---
 
-# Idea Start — The Router
+# Idea Start — the router
 
-This repository is a thinking space for business/product ideas. Ideas move through 6 phases of structured thinking, each more demanding than the last, toward a terminal verdict: **go**, **park**, or **kill**.
+Route the user to the right phase. Do no thinking, write no artifacts.
 
-## On Start
+This skill is user-invoked only. It never fires on its own, because "what should I do next?" means
+something entirely different in most sessions.
 
-1. Read `CONVENTIONS.md` for shared protocols.
-2. Scan `ideas/*/` — for each idea folder, read the frontmatter of every artifact present to determine:
-   - Current phase (the latest artifact with `status: complete`, or the one with `status: in-progress`)
-   - Last verdict (the most recent phase's `verdict` field)
-   - Any overrides taken
-   - Unresolved gaps (`gaps` entries where `resolved: false`) — count `significant` separately from `minor`
-   - Resolved gaps (`gaps` entries where `resolved: true`) — positive signal
-3. Present findings and route.
+## On start
 
-## What to Show the User
+1. Load the protocol:
+
+   ```bash
+   cat "${CLAUDE_PLUGIN_ROOT}/references/protocol.md"
+   ```
+
+   If that file cannot be read, stop and tell the user: *"Eureka looks misinstalled — I can't read
+   its protocol file. Try `/plugin marketplace update sticatz` and reinstall."* Do not proceed
+   without it; every gate in this system is defined there.
+
+2. Read the state, computed rather than inferred:
+
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/eureka.py" status
+   ```
+
+   This returns the ideas root, how it was resolved, and for each idea: every artifact's status,
+   verdict, evidence strength and gaps, plus `current_phase`, `next_phase`, `evidence_cap`,
+   `overrides`, `stale_artifacts`, `decide_ready`, `go_available` and `go_blockers`.
+
+3. **Tell the user which absolute path was scanned**, and how it resolved. The working directory
+   changes between sessions — an idea started in a different project is invisible from here, and
+   that is the most common reason a user's ideas appear to have vanished.
+
+## What to show
 
 ### If ideas exist
 
-List each idea in a table:
+| Idea | Phase | Status | Verdict | Evidence | Flags |
+|------|-------|--------|---------|----------|-------|
 
-| Idea | Current Phase | Status | Last Verdict | Flags |
-|------|--------------|--------|-------------|-------|
+Fill every column from `status` output. **Flags** surfaces, in this order of prominence:
 
-Where **Flags** surfaces: overrides taken, unresolved gaps (with `⚠` if any `significant`), killer verdicts in prior phases. If 2+ significant unresolved gaps, add `(decide evidence cap: medium)`; if 3+, `(decide evidence cap: weak)` — these warn the user that Gating Protocol B will apply when they reach idea-decide.
+- `⚠ stale` when `stale_artifacts` is non-empty — name which artifacts. An earlier phase was
+  reworked after these were written, so they may describe a different idea.
+- `⚠ N significant gaps` with the evidence cap when `evidence_cap` is set.
+- `killer (overridden)` or `killer` per phase verdicts.
+- `override ×N` when overrides exist.
+- `test T00N running` for an experiment awaiting debrief, and `⚠ falsified` for any test that came
+  back against its threshold.
+- For a decided idea with `verdict: park`, show the `revisit_trigger` verbatim. A park is a
+  decision to come back — an idea whose trigger is never surfaced again is just a slow kill.
 
-Then: "Which idea do you want to work on, or do you have a new one?"
+Then ask which idea they want to work on, or whether they have a new one.
 
 ### If no ideas exist
 
-> This repo is empty — no ideas yet. When you're ready, tell me your idea and I'll invoke `/eureka:idea-concept` to start capturing it.
+> No ideas here yet. I scanned `<absolute path>`. Tell me your idea and I'll start capturing it
+> with `/eureka:idea-concept`.
 
-### If the user mentions a specific idea
+If the resolved root looks like an unrelated project, say so and mention the two ways to pin a
+workspace: an `.eureka` marker file in the directory that should hold `ideas/`, or `$EUREKA_HOME`.
 
-Read all existing artifacts for that idea. Determine the next phase:
-- If the latest complete phase has `verdict: killer` and no override recorded on the next phase → warn about the killer verdict and ask if they want to override or revisit.
-- If a phase is `in-progress` → route to that phase's skill to continue.
-- If all phases through decide are complete → the idea has a verdict. Suggest `/eureka:idea-recap` for a summary.
-- Otherwise → route to the next incomplete phase.
+### If the user names an idea
 
-## The Workflow Brief
+Read that idea's entry and route on `next_phase`:
 
-When a user is new or asks how this works, explain:
+| State | Route to |
+|-------|----------|
+| No folder, or a new idea | `/eureka:idea-concept` |
+| A test is `designed` or `running` | `/eureka:idea-test` to debrief it |
+| `current_phase` is in-progress | that phase's skill, to continue |
+| `next_phase` set | `/eureka:idea-<next_phase>` |
+| `decide_ready` and DECISION.md complete | `/eureka:idea-recap` |
 
-> Your idea will move through 6 phases. Each phase has its own skill, its own job, and it writes a persistent artifact.
+`/eureka:idea-test` is available at any point and is not part of the sequence. Offer it whenever
+`go_blockers` names weak evidence, or when `open_assumptions` is long — it is the only skill that
+turns an assumption into a fact.
+
+Before routing, surface anything that changes what the user is walking into:
+
+- A prior `verdict: killer` with no matching override — warn that the next phase will refuse to
+  start without a recorded reason.
+- Unresolved gaps targeting the phase being routed to — that phase will offer to close them.
+- `go_blockers` when the idea is at or near decide — the user should know a `go` is currently
+  unavailable and why, before spending a session on the decision.
+
+## The brief
+
+For a user new to Eureka, before routing:
+
+> Your idea moves through six phases. Each has its own skill and writes a persistent artifact.
 >
-> **idea-concept** — What's the idea, who's it for, why now?
+> **idea-concept** — What's the idea, who's it for, why now, and why you?
 > **idea-validate** — Is the problem real? Who has it? What do they do today?
-> **idea-gtm** — How do customers find this? What does acquisition cost?
-> **idea-feasibility** — Can we build, run, afford, and legally operate this?
-> **idea-mvp** — What's the smallest concrete thing we ship to test the hypothesis?
-> **idea-decide** — Go, park, or kill. With full reasoning.
+> **idea-gtm** — How do customers find this? What does acquisition cost, and what do you charge?
+> **idea-feasibility** — Can you build, run, afford, and legally operate this?
+> **idea-mvp** — What's the smallest concrete thing that tests the core hypothesis?
+> **idea-decide** — Go, park, or kill, with full reasoning.
 >
-> Fair warning: these skills default to devil's advocate. They will refuse vague answers, demand evidence, and attack lazy reasoning. If that sounds uncomfortable, it's working. A well-reasoned "kill" is more valuable than a hand-wavy "go."
-
-```dot
-digraph idea_flow {
-    rankdir=LR;
-    node [shape=box];
-
-    start [label="Conversation starts" shape=ellipse];
-    check [label="Idea exists?" shape=diamond];
-    concept [label="/idea-concept\nPhase 1"];
-    validate [label="/idea-validate\nPhase 2"];
-    gtm [label="/idea-gtm\nPhase 3"];
-    feasibility [label="/idea-feasibility\nPhase 4"];
-    mvp [label="/idea-mvp\nPhase 5"];
-    decide [label="/idea-decide\nPhase 6"];
-    done [label="Verdict reached" shape=ellipse];
-
-    start -> check;
-    check -> concept [label="new idea"];
-    check -> concept [label="status: in-progress (concept)"];
-    check -> validate [label="concept complete"];
-    check -> gtm [label="validation complete"];
-    check -> feasibility [label="gtm complete"];
-    check -> mvp [label="feasibility complete"];
-    check -> decide [label="mvp complete"];
-    check -> done [label="decision complete"];
-
-    concept -> validate [label="proceed / proceed-with-caution"];
-    concept -> validate [label="killer (override required)" style=dotted];
-    validate -> gtm [label="proceed / proceed-with-caution"];
-    validate -> gtm [label="killer (override required)" style=dotted];
-    gtm -> feasibility [label="proceed / proceed-with-caution"];
-    gtm -> feasibility [label="killer (override required)" style=dotted];
-    feasibility -> mvp [label="proceed / proceed-with-caution"];
-    feasibility -> mvp [label="killer (override required)" style=dotted];
-    mvp -> decide [label="proceed"];
-    decide -> done [label="go / park / kill"];
-
-    // Back-arrows (advisory) — gaps may point to any earlier phase
-    validate -> concept [label="gap (advisory)" style=dashed];
-    gtm -> concept [label="gap (advisory)" style=dashed];
-    gtm -> validate [label="gap (advisory)" style=dashed];
-    feasibility -> concept [label="gap (advisory)" style=dashed];
-    feasibility -> validate [label="gap (advisory)" style=dashed];
-    feasibility -> gtm [label="gap (advisory)" style=dashed];
-    mvp -> concept [label="gap (advisory)" style=dashed];
-    mvp -> validate [label="gap (advisory)" style=dashed];
-    mvp -> gtm [label="gap (advisory)" style=dashed];
-    mvp -> feasibility [label="gap (advisory)" style=dashed];
-}
-```
-
-## Routing Table
-
-| Signal | Route to |
-|--------|----------|
-| "I have an idea for...", new idea, no existing folder | `/eureka:idea-concept` |
-| Existing idea, concept complete, no VALIDATION.md | `/eureka:idea-validate <slug>` |
-| Existing idea, validation complete, no GTM.md | `/eureka:idea-gtm <slug>` |
-| Existing idea, gtm complete, no FEASIBILITY.md | `/eureka:idea-feasibility <slug>` |
-| Existing idea, feasibility complete, no MVP.md | `/eureka:idea-mvp <slug>` |
-| Existing idea, mvp complete, no DECISION.md | `/eureka:idea-decide <slug>` |
-| Existing idea, all phases complete | `/eureka:idea-recap <slug>` |
-| Existing idea, a phase is in-progress | Route to that phase's skill |
-| "What ideas do I have?" / general overview | Show the table above |
-| "Summarize <idea>" | `/eureka:idea-recap <slug>` |
+> **idea-test** — runs alongside all of it: pick an assumption, design the cheapest experiment
+> that could prove you wrong, then record what came back.
+>
+> Two things to expect. These skills default to devil's advocate: they refuse vague answers, demand
+> evidence, and push back on lazy reasoning. And evidence is load-bearing — if the analysis rests
+> mostly on assumptions, a `go` verdict is withheld and you get a `park` with the missing evidence
+> named. A well-reasoned kill is worth more than a hand-wavy go.
+>
+> Artifacts land in `<absolute path>`. Worth running `git init` there so you can see how the
+> thinking changed.
 
 ## Rules
 
-- **Never do thinking work.** idea-start routes. It does not analyze, evaluate, or opine on ideas.
-- **Never write artifacts.** idea-start reads only.
-- **Never auto-transition.** Always wait for the user to confirm before invoking the next skill.
-- **Always brief new users.** If someone seems unfamiliar with the workflow, show the brief above before routing.
+- **Never do thinking work.** Route. Do not analyze, evaluate, or opine on an idea.
+- **Never write artifacts.** Read-only.
+- **Never auto-transition.** Present the route and wait for the user to confirm.
+- **Trust `eureka.py` over your own reading.** `current_phase` is defined there so the router and
+  `idea-recap` can never report different answers for the same folder.
